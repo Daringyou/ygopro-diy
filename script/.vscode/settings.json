@@ -1,0 +1,7 @@
+{
+    "Lua.diagnostics.globals": [
+        "bit",
+        "self_code",
+        "self_table"
+    ]
+}

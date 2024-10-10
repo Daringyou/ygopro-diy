@@ -40,8 +40,27 @@ function s.PublicEffect(c)
 	if not aux.SkyCodeCheck then
 		aux.SkyCodeCheck = true
 		aux.SkyCode = 919191340 --累计取除的指示物数量
-		aux.SkyCodeOperation(0x1091)
 		aux.SkyCodePlayer = { [0] = 0, [1] = 0 }
+		SkyCode_Duel_RemoveCounter = Duel.RemoveCounter
+		SkyCode_Card_RemoveCounter = Card.RemoveCounter
+		Duel.RemoveCounter = function(tp, loc_s, loc_o, ctype, ct, reason)
+			if ctype ~= 0x1091 then
+				return SkyCode_Duel_RemoveCounter(tp, loc_s, loc_o, ctype, ct, reason)
+			end
+			s.CalculateTarget(tp, ctype, ct)
+			local res = SkyCode_Duel_RemoveCounter(tp, loc_s, loc_o, ctype, ct, reason)
+			s.CalculateOperation(tp, ctype, ct)
+			return res
+		end
+		Card.RemoveCounter = function(c, tp, ctype, ct, reason)
+			if ctype ~= 0x1091 then
+				return SkyCode_Card_RemoveCounter(c, tp, ctype, ct, reason)
+			end
+			s.CalculateTarget(tp, ctype, ct)
+			local res = SkyCode_Card_RemoveCounter(c, tp, ctype, ct, reason)
+			s.CalculateOperation(tp, ctype, ct)
+			return res
+		end
 	end
 end
 
@@ -69,39 +88,16 @@ function s.settleval(e, c)
 	e:GetLabelObject():SetLabel(val)
 end
 
-function aux.SkyCodeOperation(rtype)
-	Duel._RemoveCounter = Duel.RemoveCounter
-	Card._RemoveCounter = Card.RemoveCounter
-	Duel.RemoveCounter = function(tp, loc_s, loc_o, ctype, ct, reason)
-		if ctype ~= rtype then
-			return Duel._RemoveCounter(tp, loc_s, loc_o, ctype, ct, reason)
-		end
-		s.CalPre(tp, ctype, ct)
-		local res = Duel._RemoveCounter(tp, loc_s, loc_o, ctype, ct, reason)
-		s.CalRes(tp, ctype, ct)
-		return res
-	end
-	Card.RemoveCounter = function(c, tp, ctype, ct, reason)
-		if ctype ~= rtype then
-			return Card._RemoveCounter(c, tp, ctype, ct, reason)
-		end
-		s.CalPre(tp, ctype, ct)
-		local res = Card._RemoveCounter(c, tp, ctype, ct, reason)
-		s.CalRes(tp, ctype, ct)
-		return res
-	end
-end
-
-function s.CalFilter(c, ctype)
-	if c:GetFlagEffect(aux.SkyCode) then return false end
+function s.CalculateFilter(c, ctype)
 	if ctype then
 		return c:GetCounter(ctype) > 0
 	end
 	return c:GetFlagEffectLabel(aux.SkyCode + 100)
 end
 
-function s.CalPre(tp, ctype, ct)
-	local g = Duel.GetMatchingGroup(s.CalFilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, nil, ctype)
+function s.CalculateTarget(tp, ctype, ct)
+	local g = Duel.GetMatchingGroup(s.CalculateFilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, nil, ctype)
+	if g:GetCount() == 0 then return false end
 	for tc in aux.Next(g) do
 		local ft = tc:GetFlagEffectLabel(aux.SkyCode + 100)
 		if ft then
@@ -113,16 +109,19 @@ function s.CalPre(tp, ctype, ct)
 	end
 end
 
-function s.CalRes(tp, ctype, ct)
-	local g = Duel.GetMatchingGroup(s.CalFilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, nil)
+function s.CalculateOperation(tp, ctype, ct)
+	local g = Duel.GetMatchingGroup(s.CalculateFilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, nil)
 	for tc in aux.Next(g) do
-		if tc:GetFlagEffectLabel(aux.SkyCode + 100) > tc:GetCounter(ctype) then
-			tc:RegisterFlagEffect(aux.SkyCode, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1)
+		local ft1 = tc:GetFlagEffectLabel(aux.SkyCode + 100)
+		local ft2 = tc:GetCounter(ctype)
+		if ft1 > ft2 then
+			aux.SkyCodePlayer[tp] = aux.SkyCodePlayer[tp] + ft1 - ft2
+			if tc:GetFlagEffect(aux.SkyCode) == 0 then
+				tc:RegisterFlagEffect(aux.SkyCode, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1)
+			end
 		end
 		tc:ResetFlagEffect(aux.SkyCode + 100)
 	end
-	aux.SkyCodePlayer[tp] = aux.SkyCodePlayer[tp] + ct
-	--Debug.Message(string.format("累计取除数量 = %s",aux.SkyCodePlayer[tp]))
 	Duel.Readjust()
 end
 
@@ -141,23 +140,23 @@ function s.PrivateEffect(c)
 	c:RegisterEffect(e0)
 	--攻守上升
 	local e1 = Effect.CreateEffect(c)
-	e1:SetDescription(aux.Stringid(id, 4))
+	e1:SetDescription(aux.Stringid(id, 1))
 	e1:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CLIENT_HINT)
 	e1:SetType(EFFECT_TYPE_SINGLE)
 	e1:SetCode(EFFECT_UPDATE_ATTACK)
 	e1:SetRange(LOCATION_MZONE)
-	e1:SetValue(s.efval1)
+	e1:SetValue(s.efilter1)
 	e1:SetLabel(1)
 	local ge1 = Effect.CreateEffect(c)
 	ge1:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_GRANT)
 	ge1:SetRange(LOCATION_MZONE)
 	ge1:SetTargetRange(LOCATION_MZONE, 0)
-	ge1:SetTarget(s.eftg)
+	ge1:SetTarget(s.granttg)
 	ge1:SetLabelObject(e1)
 	c:RegisterEffect(ge1)
 	--卡组抽卡
 	local e2 = Effect.CreateEffect(c)
-	e2:SetDescription(aux.Stringid(id, 5))
+	e2:SetDescription(aux.Stringid(id, 2))
 	e2:SetCategory(CATEGORY_DRAW)
 	e2:SetProperty(EFFECT_FLAG_CLIENT_HINT)
 	e2:SetType(EFFECT_TYPE_IGNITION)
@@ -170,37 +169,41 @@ function s.PrivateEffect(c)
 	local ge2 = ge1:Clone()
 	ge2:SetLabelObject(e2)
 	c:RegisterEffect(ge2)
-	--效果免疫
+	--放置指示物
 	local e3 = Effect.CreateEffect(c)
-	e3:SetDescription(aux.Stringid(id, 6))
-	e3:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CLIENT_HINT)
-	e3:SetType(EFFECT_TYPE_SINGLE)
-	e3:SetCode(EFFECT_IMMUNE_EFFECT)
+	e3:SetDescription(aux.Stringid(id, 3))
+	e3:SetProperty(EFFECT_FLAG_CLIENT_HINT)
+	e3:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+	e3:SetCode(EVENT_CHAINING)
 	e3:SetRange(LOCATION_MZONE)
-	e3:SetValue(s.efval2)
-	e3:SetLabel(4)
-	e3:SetOwnerPlayer(tp)
+	e3:SetCountLimit(1)
+	e3:SetLabel(3)
+	e3:SetCondition(s.ctcon)
+	e3:SetOperation(s.ctop)
 	local ge3 = ge1:Clone()
 	ge3:SetLabelObject(e3)
 	c:RegisterEffect(ge3)
-	--放置指示物
+	--效果免疫
 	local e4 = Effect.CreateEffect(c)
-	e4:SetDescription(aux.Stringid(id, 7))
-	e4:SetProperty(EFFECT_FLAG_CLIENT_HINT)
-	e4:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
-	e4:SetCode(EVENT_CHAINING)
+	e4:SetDescription(aux.Stringid(id, 4))
+	e4:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CLIENT_HINT)
+	e4:SetType(EFFECT_TYPE_SINGLE)
+	e4:SetCode(EFFECT_IMMUNE_EFFECT)
 	e4:SetRange(LOCATION_MZONE)
-	e4:SetCountLimit(1)
-	e4:SetLabel(3)
-	e4:SetCondition(s.efcon)
-	e4:SetOperation(s.efop)
+	e4:SetValue(s.efilter2)
+	e4:SetLabel(4)
 	local ge4 = ge1:Clone()
 	ge4:SetLabelObject(e4)
 	c:RegisterEffect(ge4)
 end
 
-function s.remfilter(c, tp)
-	return c:IsCanRemoveCounter(tp, 0x1091, 1, REASON_COST)
+function s.remfilter(c, tp, list)
+	local ct = list and list[c] or 0
+	return c:GetFlagEffect(id) == 0 and c:IsCanRemoveCounter(tp, 0x1091, ct + 1, REASON_COST)
+end
+
+function s.seqfilter(c, seq)
+	return c:GetSequence() == seq
 end
 
 function s.remtg(e, tp, eg, ep, ev, re, r, rp, chk)
@@ -211,49 +214,74 @@ function s.remtg(e, tp, eg, ep, ev, re, r, rp, chk)
 			and Duel.IsExistingMatchingCard(s.remfilter, tp, LOCATION_ONFIELD, 0, 1, nil, tp)
 	end
 	local ct = 0
-	local clist = {}
-	local g = Duel.GetDecktopGroup(1 - tp, 1)
-	while g:GetCount() == ct + 1 and g:FilterCount(Card.IsAbleToRemove, nil) == g:GetCount() and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
+	local min = 1
+	local list = {}
+	local og = Group.CreateGroup()
+	local g = Duel.GetFieldGroup(tp, 0, LOCATION_DECK)
+	local deckct = g:GetCount()
+	local tc = g:Filter(s.seqfilter, nil, deckct - ct - 1):GetFirst()
+	while tc and tc:IsAbleToRemove() and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
+		Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 5))
+		local sg = Duel.SelectMatchingCard(tp, s.remfilter, tp, LOCATION_ONFIELD, 0, min, 1, nil, tp, list)
+		if not sg or sg:GetCount() == 0 then break end
 		ct = ct + 1
-		clist[ct] = ct
-		g = Duel.GetDecktopGroup(1 - tp, ct + 1)
+		local sc = sg:GetFirst()
+		if not list[sc] then list[sc] = 0 end
+		list[sc] = list[sc] + 1
+		og:AddCard(sc)
+		if min ~= 0 then min = 0 end
+		tc = g:Filter(s.seqfilter, nil, deckct - ct - 1):GetFirst()
 	end
-	Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 2))
-	local AnnounceCount = Duel.AnnounceNumber(tp, table.unpack(clist))
-	Duel.RemoveCounter(tp, 1, 0, 0x1091, AnnounceCount, REASON_COST)
+	for oc in aux.Next(og) do
+		if oc:GetFlagEffect(id) == 0 then
+			oc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, EFFECT_FLAG_CLIENT_HINT, 1, 0, aux.Stringid(id, 6))
+		end
+		oc:RemoveCounter(tp,0x1091,list[oc],REASON_COST)
+	end
 	Duel.SetTargetPlayer(1 - tp)
-	Duel.SetTargetParam(AnnounceCount)
-	Duel.SetOperationInfo(0, CATEGORY_REMOVE, nil, AnnounceCount, 1 - tp, LOCATION_DECK)
+	Duel.SetTargetParam(ct)
+	Duel.SetOperationInfo(0, CATEGORY_REMOVE, nil, ct, 1 - tp, LOCATION_DECK)
+end
+
+function s.remcheck(c, seq)
+	return c:GetSequence() > seq
 end
 
 function s.remop(e, tp, eg, ep, ev, re, r, rp)
-	if Duel.GetFieldGroupCount(tp, 0, LOCATION_DECK) == 0 then return end
 	local p, d = Duel.GetChainInfo(0, CHAININFO_TARGET_PLAYER, CHAININFO_TARGET_PARAM)
-	local g = Duel.GetDecktopGroup(p, d)
-	local sg = g:Filter(Card.IsAbleToRemove, nil)
-	if sg:GetCount() > 0 then
+	local g = Duel.GetFieldGroup(p, LOCATION_DECK, 0)
+	if g:GetCount() == 0 then return end
+	local seq = -1
+	local rg = g:Filter(aux.NOT(Card.IsAbleToRemove), nil)
+	if rg:GetCount() > 0 then
+		local _, maxseq = rg:GetMaxGroup(Card.GetSequence)
+		seq = g:Filter(s.remcheck, nil, maxseq)
+	end
+	local sg = g:Filter(s.remcheck, nil, seq)
+	local og = Duel.GetDecktopGroup(p, math.min(d, sg:GetCount()))
+	if og:GetCount() > 0 then
 		Duel.DisableShuffleCheck()
-		local ct = Duel.Remove(sg, POS_FACEDOWN, REASON_EFFECT)
+		local ct = Duel.Remove(og, POS_FACEDOWN, REASON_EFFECT)
 		local e1 = Effect.CreateEffect(e:GetHandler())
 		e1:SetType(EFFECT_TYPE_FIELD)
 		e1:SetCode(EFFECT_UPDATE_ATTACK)
 		e1:SetTargetRange(LOCATION_MZONE, 0)
-		e1:SetTarget(s.remval)
+		e1:SetTarget(s.addval)
 		e1:SetValue(ct * 100)
 		e1:SetReset(RESET_PHASE + PHASE_END)
 		Duel.RegisterEffect(e1, tp)
 	end
 end
 
-function s.remval(e, c)
-	return c:GetFlagEffect(aux.SkyCode)
+function s.addval(e, c)
+	return c:GetFlagEffect(aux.SkyCode) > 0
 end
 
-function s.eftg(e, c)
-	return aux.SkyCodePlayer[e:GetHandlerPlayer()] >= e:GetLabelObject():GetLabel() and c:GetFlagEffect(aux.SkyCode)
+function s.granttg(e, c)
+	return aux.SkyCodePlayer[e:GetHandlerPlayer()] >= e:GetLabelObject():GetLabel() and c:GetFlagEffect(aux.SkyCode) > 0
 end
 
-function s.efval1(e, c)
+function s.efilter1(e, c)
 	return aux.SkyCodePlayer[e:GetHandlerPlayer()] * 100
 end
 
@@ -274,15 +302,15 @@ function s.drop(e, tp, eg, ep, ev, re, r, rp)
 	Duel.Draw(p, d, REASON_EFFECT)
 end
 
-function s.efval2(e, re)
+function s.efilter2(e, re)
 	return e:GetHandlerPlayer() ~= re:GetOwnerPlayer()
 end
 
-function s.efcon(e, tp, eg, ep, ev, re, r, rp)
-	return rp == 1 - tp and not e:GetHandler():IsStatus(STATUS_BATTLE_DESTROYED)
+function s.ctcon(e, tp, eg, ep, ev, re, r, rp)
+	return ep == 1 - tp and not e:GetHandler():IsStatus(STATUS_BATTLE_DESTROYED)
 end
 
-function s.efop(e, tp, eg, ep, ev, re, r, rp)
+function s.ctop(e, tp, eg, ep, ev, re, r, rp)
 	Duel.Hint(HINT_CARD, tp, id)
 	e:GetHandler():AddCounter(0x1091, 1)
 end

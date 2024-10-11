@@ -4,17 +4,6 @@ s.name = "天印·紫微"
 function s.initial_effect(c)
 	s.PublicEffect(c)
 	s.PrivateEffect(c)
-	Duel.AddCustomActivityCounter(id, ACTIVITY_CHAIN, s.ChainCheck)
-end
-
---
-function s.ChainCheck(re, tp, cid)
-	local rc = re:GetHandler()
-	return not (re:GetHandler():IsLevel(4) and not rc:IsCode(id) and re:IsActiveType(TYPE_MONSTER))
-end
-
-function s.ActivateCheck()
-	return Duel.GetCustomActivityCount(id, 0, ACTIVITY_CHAIN) + Duel.GetCustomActivityCount(id, 1, ACTIVITY_CHAIN) ~= 0
 end
 
 function s.PublicEffect(c)
@@ -50,9 +39,28 @@ function s.PublicEffect(c)
 	--指示物累计取除数值
 	if not aux.SkyCodeCheck then
 		aux.SkyCodeCheck = true
-		aux.SkyCodeSub = 91919134 --累计取除的指示物数量
-		aux.SkyCodeNow = 919191340 --当前放置的指示物数量
-		aux.SkyCodeOperation()
+		aux.SkyCode = 919191340 --累计取除的指示物数量
+		aux.SkyCodePlayer = { [0] = 0, [1] = 0 }
+		SkyCode_Duel_RemoveCounter = Duel.RemoveCounter
+		SkyCode_Card_RemoveCounter = Card.RemoveCounter
+		Duel.RemoveCounter = function(tp, loc_s, loc_o, ctype, ct, reason)
+			if ctype ~= 0x1091 then
+				return SkyCode_Duel_RemoveCounter(tp, loc_s, loc_o, ctype, ct, reason)
+			end
+			s.CalculateTarget(tp, ctype, ct)
+			local res = SkyCode_Duel_RemoveCounter(tp, loc_s, loc_o, ctype, ct, reason)
+			s.CalculateOperation(tp, ctype, ct)
+			return res
+		end
+		Card.RemoveCounter = function(c, tp, ctype, ct, reason)
+			if ctype ~= 0x1091 then
+				return SkyCode_Card_RemoveCounter(c, tp, ctype, ct, reason)
+			end
+			s.CalculateTarget(tp, ctype, ct)
+			local res = SkyCode_Card_RemoveCounter(c, tp, ctype, ct, reason)
+			s.CalculateOperation(tp, ctype, ct)
+			return res
+		end
 	end
 end
 
@@ -80,81 +88,44 @@ function s.settleval(e, c)
 	e:GetLabelObject():SetLabel(val)
 end
 
-function aux.SkyCodeOperation()
-	Duel._RemoveCounter = Duel.RemoveCounter
-	Card._RemoveCounter = Card.RemoveCounter
-	Card._AddCounter = Card.AddCounter
-	Duel.RemoveCounter = function(tp, loc_s, loc_o, ctype, ct, reason)
-		if ctype ~= 0x1091 then
-			return Duel._RemoveCounter(tp, loc_s, loc_o, ctype, ct, reason)
-		end
-		s.Calculate()
-		local res = Duel._RemoveCounter(tp, loc_s, loc_o, ctype, ct, reason)
-		s.Calculate()
-		return res
+function s.CalculateFilter(c, ctype)
+	if ctype then
+		return c:GetCounter(ctype) > 0
 	end
-	Card.RemoveCounter = function(c, tp, ctype, ct, reason)
-		if ctype ~= 0x1091 then
-			return Card._RemoveCounter(c, tp, ctype, ct, reason)
-		end
-		s.Calculate()
-		local res = Card._RemoveCounter(c, tp, ctype, ct, reason)
-		s.Calculate()
-		return res
-	end
-	Card.AddCounter = function(c, ctype, ct, singly)
-		if ctype ~= 0x1091 then
-			return Card._AddCounter(c, ctype, ct, singly)
-		end
-		s.Calculate()
-		local res = Card._AddCounter(c, ctype, ct, singly)
-		s.Calculate()
-		return res
-	end
+	return c:GetFlagEffectLabel(aux.SkyCode + 100)
 end
 
-function s.CalculateFilter(c)
-	if not c:IsLevel(4) then return false end
-	local code_now = aux.SkyCodeNow
-	local code_sub = aux.SkyCodeSub
-	local ct_now = c:GetFlagEffectLabel(code_now)
-	local ct_sub = c:GetFlagEffectLabel(code_sub)
-	local ct = c:GetCounter(0x1091)
-	return not ct_now or not ct_sub or ct_now ~= ct
-end
-
-function s.Calculate()
-	local g = Duel.GetMatchingGroup(s.CalculateFilter, tp, LOCATION_MZONE, LOCATION_MZONE, nil)
-	if g:GetCount() == 0 then return end
-	local code_sub = aux.SkyCodeSub              --累计取除指示物数量
-	local code_now = aux.SkyCodeNow              --当前放置的指示物数量
+function s.CalculateTarget(tp, ctype, ct)
+	local g = Duel.GetMatchingGroup(s.CalculateFilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, nil, ctype)
+	if g:GetCount() == 0 then return false end
 	for tc in aux.Next(g) do
-		local ct_sub = tc:GetFlagEffectLabel(code_sub) --该flag为指示物累计下降数值的计数器
-		local ct_now = tc:GetFlagEffectLabel(code_now) --该flag为指示物标识器,滞后于实际指示物变化
-		local ct = tc:GetCounter(0x1091)
-		if not ct_sub then
-			ct_sub = 0
-			tc:RegisterFlagEffect(code_sub, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1, 0)
+		local ft = tc:GetFlagEffectLabel(aux.SkyCode + 100)
+		if ft then
+			tc:SetFlagEffectLabel(aux.SkyCode + 100, tc:GetCounter(ctype))
+		else
+			tc:RegisterFlagEffect(aux.SkyCode + 100, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1,
+				tc:GetCounter(ctype))
 		end
-		if not ct_now then
-			ct_now = 0
-			tc:RegisterFlagEffect(code_now, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1, 0)
+	end
+end
+
+function s.CalculateOperation(tp, ctype, ct)
+	local g = Duel.GetMatchingGroup(s.CalculateFilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, nil)
+	for tc in aux.Next(g) do
+		local ft1 = tc:GetFlagEffectLabel(aux.SkyCode + 100)
+		local ft2 = tc:GetCounter(ctype)
+		if ft1 > ft2 then
+			aux.SkyCodePlayer[tp] = aux.SkyCodePlayer[tp] + ft1 - ft2
+			if tc:GetFlagEffect(aux.SkyCode) == 0 then
+				tc:RegisterFlagEffect(aux.SkyCode, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1)
+			end
 		end
-		if ct < ct_now then
-			local ct_result = ct_sub + math.abs(ct_now - ct)
-			tc:ResetFlagEffect(code_sub)
-			tc:RegisterFlagEffect(code_sub, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1, ct_result)
-			tc:ResetFlagEffect(code_now)
-			tc:RegisterFlagEffect(code_now, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1, ct)
-		elseif ct > ct_now then
-			tc:ResetFlagEffect(code_now)
-			tc:RegisterFlagEffect(code_now, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1, ct)
-		end
+		tc:ResetFlagEffect(aux.SkyCode + 100)
 	end
 	Duel.Readjust()
 end
 
-function s.PrivateEffect(c)
+function s.PrivateEffect(c, reg)
 	--卡组检索&堆墓
 	local e1 = Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id, 0))
@@ -182,14 +153,24 @@ function s.PrivateEffect(c)
 	e3:SetOperation(s.repop)
 	e3:SetValue(s.repval)
 	c:RegisterEffect(e3)
+	Duel.AddCustomActivityCounter(id, ACTIVITY_CHAIN, s.ChainCheck)
+end
+
+function s.ChainCheck(re, tp, cid)
+	local rc = re:GetHandler()
+	return not (re:GetHandler():IsLevel(4) and not rc:IsCode(id) and re:IsActiveType(TYPE_MONSTER))
+end
+
+function s.ActivateCheck()
+	return Duel.GetCustomActivityCount(id, 0, ACTIVITY_CHAIN) + Duel.GetCustomActivityCount(id, 1, ACTIVITY_CHAIN) == 0
 end
 
 function s.thcon1(e, tp, eg, ep, ev, re, r, rp)
-	return not s.ActivateCheck()
+	return s.ActivateCheck()
 end
 
 function s.thcon2(e, tp, eg, ep, ev, re, r, rp)
-	return s.ActivateCheck()
+	return not s.ActivateCheck()
 end
 
 function s.thfilter(c)
@@ -203,11 +184,15 @@ function s.thtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	end
 	local g = Duel.GetMatchingGroup(s.thfilter, tp, LOCATION_DECK, 0, nil)
 	local ct = 1
-	if g:GetClassCount(Card.GetCode) > 1 and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 2, REASON_COST) then
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
+	if g:GetClassCount(Card.GetCode) > 1 and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST) then
 		Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 2))
-		ct = Duel.AnnounceNumber(tp, 1, 2)
+		local sg = Duel.SelectMatchingCard(tp, Card.IsCanRemoveCounter, tp, LOCATION_ONFIELD, 0, 0, 1, nil, tp, 0x1091, 1, REASON_COST)
+		if sg and sg:GetCount() == 1 then
+			ct = ct + 1
+			sg:GetFirst():RemoveCounter(tp, 0x1091, 1, REASON_COST)
+		end
 	end
-	Duel.RemoveCounter(tp, 1, 0, 0x1091, ct, REASON_COST)
 	e:SetLabel(ct)
 	Duel.SetOperationInfo(0, CATEGORY_TOHAND, nil, ct, tp, LOCATION_DECK)
 end

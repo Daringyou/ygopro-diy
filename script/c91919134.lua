@@ -228,15 +228,16 @@ function s.remtg(e, tp, eg, ep, ev, re, r, rp, chk)
 		local sc = sg:GetFirst()
 		if not list[sc] then list[sc] = 0 end
 		list[sc] = list[sc] + 1
-		og:AddCard(sc)
+		og:Merge(sg)
 		if min ~= 0 then min = 0 end
 		tc = g:Filter(s.seqfilter, nil, deckct - ct - 1):GetFirst()
 	end
 	for oc in aux.Next(og) do
 		if oc:GetFlagEffect(id) == 0 then
-			oc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, EFFECT_FLAG_CLIENT_HINT, 1, 0, aux.Stringid(id, 6))
+			oc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, EFFECT_FLAG_CLIENT_HINT, 1,
+				0, aux.Stringid(id, 6))
 		end
-		oc:RemoveCounter(tp,0x1091,list[oc],REASON_COST)
+		oc:RemoveCounter(tp, 0x1091, list[oc], REASON_COST)
 	end
 	Duel.SetTargetPlayer(1 - tp)
 	Duel.SetTargetParam(ct)

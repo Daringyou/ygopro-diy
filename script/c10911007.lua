@@ -1,6 +1,6 @@
---天印·都市
+--天印·转轮
 local s, id, o = GetID()
-s.name = "天印·都市"
+s.name = "天印·转轮"
 function s.initial_effect(c)
 	--卡组检索
 	local e1 = Effect.CreateEffect(c)
@@ -44,12 +44,12 @@ function s.initial_effect(c)
 	e3:SetCategory(CATEGORY_SPECIAL_SUMMON + CATEGORY_FUSION_SUMMON)
 	e3:SetProperty(EFFECT_FLAG_DELAY + EFFECT_FLAG_DAMAGE_STEP)
 	e3:SetType(EFFECT_TYPE_SINGLE + EFFECT_TYPE_TRIGGER_O)
-	e3:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e3:SetCode(EVENT_SUMMON_SUCCESS)
 	e3:SetTarget(s.fstg)
 	e3:SetOperation(s.fsop)
 	c:RegisterEffect(e3)
 	local e4 = e3:Clone()
-	e4:SetCode(EVENT_SUMMON_SUCCESS)
+	e4:SetCode(EVENT_SPSUMMON_SUCCESS)
 	c:RegisterEffect(e4)
 	Duel.AddCustomActivityCounter(id, ACTIVITY_CHAIN, s.chainfilter)
 end
@@ -77,7 +77,7 @@ function s.thcost(e, tp, eg, ep, ev, re, r, rp, chk)
 end
 
 function s.thfilter(c)
-	return c:IsSetCard(0x1091) and c:IsType(TYPE_SPELL + TYPE_TRAP) and c:IsAbleToHand()
+	return c:GetOriginalLevel() == 2 and c:IsType(TYPE_MONSTER) and not c:IsCode(id) and c:IsAbleToHand()
 end
 
 function s.thtg(e, tp, eg, ep, ev, re, r, rp, chk)
@@ -95,7 +95,7 @@ function s.thop(e, tp, eg, ep, ev, re, r, rp)
 end
 
 function s.spfilter(c)
-	return c:IsSetCard(0x1091) and c:IsType(TYPE_SPELL + TYPE_TRAP) and c:IsAbleToRemoveAsCost()
+	return c:GetOriginalLevel() == 2 and c:IsType(TYPE_MONSTER) and c:IsAbleToRemoveAsCost() and not c:IsCode(id)
 end
 
 function s.spcost(e, tp, eg, ep, ev, re, r, rp, chk)

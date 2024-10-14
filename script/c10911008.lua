@@ -1,6 +1,6 @@
---天印·转轮
+--天印·都市
 local s, id, o = GetID()
-s.name = "天印·转轮"
+s.name = "天印·都市"
 function s.initial_effect(c)
 	--卡组检索+特殊召唤
 	local e1 = Effect.CreateEffect(c)
@@ -54,7 +54,7 @@ function s.thcon2(e, tp, eg, ep, ev, re, r, rp)
 end
 
 function s.costfilter(c)
-	return c:IsLevel(4) and c:IsType(TYPE_MONSTER) and not c:IsCode(id) and
+	return c:IsType(TYPE_SPELL + TYPE_TRAP) and c:IsSetCard(0x1091) and
 		(c:IsLocation(LOCATION_HAND) and c:IsDiscardable() or c:IsAbleToRemoveAsCost())
 end
 
@@ -82,7 +82,7 @@ function s.thtg(e, tp, eg, ep, ev, re, r, rp, chk)
 end
 
 function s.thfilter(c)
-	return c:IsLevel(4) and c:IsType(TYPE_MONSTER) and not c:IsCode(id) and c:IsAbleToHand()
+	return c:IsType(TYPE_SPELL + TYPE_TRAP) and c:IsSetCard(0x1091) and c:IsAbleToHand()
 end
 
 function s.thop(e, tp, eg, ep, ev, re, r, rp)
@@ -91,15 +91,9 @@ function s.thop(e, tp, eg, ep, ev, re, r, rp)
 	if c:IsRelateToEffect(e) and Duel.SpecialSummon(c, 0, tp, tp, false, false, POS_FACEUP) > 0 then
 		Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_ATOHAND)
 		local g = Duel.SelectMatchingCard(tp, s.thfilter, tp, LOCATION_DECK, 0, 1, 1, nil)
-		local tc = g:GetFirst()
-		if tc then
-			Duel.SendtoHand(tc, nil, REASON_EFFECT)
-			Duel.ConfirmCards(1 - tp, tc)
-			if tc:IsCanBeSpecialSummoned(e, 0, tp, false, false) and Duel.GetLocationCount(tp, LOCATION_MZONE) > 0 and Duel.SelectYesNo(tp, aux.Stringid(id, 2)) then
-				Duel.BreakEffect()
-				Duel.ShuffleHand(tp)
-				Duel.SpecialSummon(tc, 0, tp, tp, false, false, POS_FACEUP)
-			end
+		if g:GetFirst() > 0 then
+			Duel.SendtoHand(g, nil, REASON_EFFECT)
+			Duel.ConfirmCards(1 - tp, g)
 		end
 	end
 end

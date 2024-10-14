@@ -115,7 +115,7 @@ function s.thtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	Duel.SetOperationInfo(0, CATEGORY_TOHAND, nil, 1, tp, LOCATION_DECK)
 end
 
-function s.thfilter(c, e, tp)
+function s.thfilter(c)
 	return c:IsLevel(4) and c:IsType(TYPE_MONSTER) and not c:IsCode(id) and c:IsAbleToHand()
 end
 

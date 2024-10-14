@@ -130,6 +130,7 @@ function s.thop(e, tp, eg, ep, ev, re, r, rp)
 	if not tc:IsRelateToEffect(e) then return end
 	if Duel.SendtoHand(tc, nil, REASON_EFFECT) > 0 and tc:IsLocation(LOCATION_HAND) then
 		Duel.BreakEffect()
+		Duel.DisableShuffleCheck()
 		Duel.DiscardDeck(tp, 3, REASON_EFFECT)
 	end
 end

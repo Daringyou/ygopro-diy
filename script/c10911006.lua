@@ -182,27 +182,28 @@ function s.gsop(e, tp, eg, ep, ev, re, r, rp)
 	end
 end
 
-function s.cfilter(c)
-	return c:IsFaceup() and c:GetOriginalLevel() == 2 and not c:IsCode(id)
+function s.cfilter(c, lv)
+	return c:IsFaceup() and not c:IsCode(id) and not c:IsLevel(4)
 end
 
 function s.spcon1(e, tp, eg, ep, ev, re, r, rp)
-	return Duel.IsExistingMatchingCard(s.cfilter, tp, LOCATION_MZONE, 0, 1, nil)
+	return not Duel.IsExistingMatchingCard(s.cfilter, tp, LOCATION_MZONE, 0, 1, nil)
+		and Duel.GetFieldGroupCount(tp, LOCATION_MZONE, 0) > 0
 		and s.ActivateCheck()
 end
 
 function s.spcon2(e, tp, eg, ep, ev, re, r, rp)
-	return Duel.IsExistingMatchingCard(s.cfilter, tp, LOCATION_MZONE, 0, 1, nil)
+	return not Duel.IsExistingMatchingCard(s.cfilter, tp, LOCATION_MZONE, 0, 1, nil)
+		and Duel.GetFieldGroupCount(tp, LOCATION_MZONE, 0) > 0
 		and not s.ActivateCheck()
 end
 
 function s.sptg(e, tp, eg, ep, ev, re, r, rp, chk)
-	local c = e:GetHandler()
 	if chk == 0 then
-		return Duel.GetLocationCount(tp, LOCATION_MZONE) > 0 and c:IsCanBeSpecialSummoned(e, 0, tp, false, false)
-			and Duel.IsExistingMatchingCard(s.cfilter, tp, LOCATION_MZONE, 0, 1, nil)
+		return Duel.GetLocationCount(tp, LOCATION_MZONE) > 0
+			and e:GetHandler():IsCanBeSpecialSummoned(e, 0, tp, false, false)
 	end
-	Duel.SetOperationInfo(0, CATEGORY_SPECIAL_SUMMON, c, 1, 0, 0)
+	Duel.SetOperationInfo(0, CATEGORY_SPECIAL_SUMMON, e:GetHandler(), 1, 0, 0)
 end
 
 function s.spop(e, tp, eg, ep, ev, re, r, rp)

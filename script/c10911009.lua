@@ -14,6 +14,31 @@ function s.initial_effect(c)
 	e1:SetCost(s.fscost)
 	e1:SetOperation(s.fsop)
 	c:RegisterEffect(e1)
+	--效果无效
+	local e2 = Effect.CreateEffect(c)
+	e2:SetDescription(aux.Stringid(id, 1))
+	e2:SetType(EFFECT_TYPE_IGNITION)
+	e2:SetRange(LOCATION_GRAVE)
+	e2:SetCondition(s.discon1)
+	e2:SetCost(s.discost)
+	e2:SetTarget(s.solvetg)
+	e2:SetOperation(s.disop)
+	c:RegisterEffect(e2)
+	local e3 = e2:Clone()
+	e3:SetType(EFFECT_TYPE_QUICK_O)
+	e3:SetCode(EVENT_FREE_CHAIN)
+	e3:SetCondition(s.discon2)
+	c:RegisterEffect(e3)
+	Duel.AddCustomActivityCounter(id, ACTIVITY_CHAIN, s.ChainCheck)
+end
+
+function s.ChainCheck(re, tp, cid)
+	local rc = re:GetHandler()
+	return not (re:GetHandler():IsLevel(4) and not rc:IsCode(id) and re:IsActiveType(TYPE_MONSTER))
+end
+
+function s.ActivateCheck()
+	return Duel.GetCustomActivityCount(id, 0, ACTIVITY_CHAIN) + Duel.GetCustomActivityCount(id, 1, ACTIVITY_CHAIN) == 0
 end
 
 function s.fscon(e, tp, eg, ep, ev, re, r, rp)
@@ -80,7 +105,7 @@ function s.fsop(e, tp, eg, ep, ev, re, r, rp)
 		local mf = ce:GetValue()
 		sg2 = Duel.GetMatchingGroup(s.filter2, tp, LOCATION_EXTRA, 0, nil, e, tp, mg3, mf, c, chkf)
 	end
-	if (sg1:GetCount() > 0 or (sg2 ~= nil and sg2:GetCount() > 0)) and Duel.SelectYesNo(tp, aux.Stringid(id, 1)) then
+	if (sg1:GetCount() > 0 or (sg2 ~= nil and sg2:GetCount() > 0)) and Duel.SelectYesNo(tp, aux.Stringid(id, 2)) then
 		local sg = sg1:Clone()
 		if sg2 then sg:Merge(sg2) end
 		Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_SPSUMMON)
@@ -100,4 +125,82 @@ function s.fsop(e, tp, eg, ep, ev, re, r, rp)
 		tc:CompleteProcedure()
 	end
 	aux.FCheckAdditional = nil
+end
+
+function s.disfilter(c, e, tp)
+	return c:IsType(TYPE_FUSION) and c:IsAbleToRemoveAsCost() and c:GetAttribute() ~= 0
+end
+
+function s.discost(e, tp, eg, ep, ev, re, r, rp, chk)
+	if chk == 0 then
+		return e:GetHandler():IsAbleToRemoveAsCost()
+			and Duel.IsExistingMatchingCard(s.disfilter, tp, LOCATION_GRAVE, 0, 1, e:GetHandler())
+	end
+	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_REMOVE)
+	local g = Duel.SelectMatchingCard(tp, s.disfilter, tp, LOCATION_GRAVE, 0, 1, 1, e:GetHandler())
+	e:SetLabel(g:GetFirst():GetAttribute())
+	g:AddCard(e:GetHandler())
+	Duel.Remove(g, POS_FACEUP, REASON_COST)
+end
+
+function s.disop(e, tp, eg, ep, ev, re, r, rp)
+	local c = e:GetHandler()
+	local att = e:GetLabel()
+	--发动限制
+	local e1 = Effect.CreateEffect(c)
+	e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+	e1:SetType(EFFECT_TYPE_FIELD)
+	e1:SetCode(EFFECT_CANNOT_ACTIVATE)
+	e1:SetTargetRange(0, 1)
+	e1:SetLabel(att)
+	e1:SetValue(s.aclimit)
+	e1:SetReset(RESET_PHASE + PHASE_END)
+	Duel.RegisterEffect(e1, tp)
+	--效果无效
+	local e2 = Effect.CreateEffect(c)
+	e2:SetType(EFFECT_TYPE_FIELD)
+	e2:SetCode(EFFECT_DISABLE)
+	e2:SetTargetRange(0, LOCATION_MZONE)
+	e2:SetLabel(att)
+	e2:SetTarget(s.solvetg)
+	Duel.RegisterEffect(e2, tp)
+	--效果无效
+	local e3 = Effect.CreateEffect(c)
+	e3:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+	e3:SetCode(EVENT_CHAIN_SOLVING)
+	e3:SetRange(LOCATION_MZONE)
+	e3:SetLabel(att)
+	e3:SetCondition(s.solvecon)
+	e3:SetOperation(s.solveop)
+	Duel.RegisterEffect(e3, tp)
+	--无效陷阱怪兽
+	local e4 = Effect.CreateEffect(c)
+	e4:SetType(EFFECT_TYPE_FIELD)
+	e4:SetCode(EFFECT_DISABLE_TRAPMONSTER)
+	e4:SetTargetRange(0, LOCATION_MZONE)
+	e4:SetLabel(att)
+	e4:SetTarget(s.solvetg)
+	Duel.RegisterEffect(e4, tp)
+end
+
+function s.aclimit(e, re, tp)
+	local att = e:GetLabel()
+	local loc = re:GetActivateLocation()
+	return bit.band(loc, LOCATION_MZONE) == LOCATION_MZONE and re:IsActiveType(TYPE_MONSTER)
+		and bit.band(att, re:GetHandler():GetAttribute()) ~= 0
+end
+
+function s.solvetg(e, c)
+	return bit.band(e:GetLabel(), c:GetAttribute()) ~= 0
+end
+
+function s.solvecon(e, tp, eg, ep, ev, re, r, rp)
+	local att, loc, tep = Duel.GetChainInfo(ev, CHAININFO_TRIGGERING_ATTRIBUTE, CHAININFO_TRIGGERING_LOCATION,
+		CHAININFO_TRIGGERING_PLAYER)
+	return loc == LOCATION_MZONE and re:IsActiveType(TYPE_MONSTER) and bit.band(att, e:GetLabel()) ~= 0
+		and tep == 1 - tp and Duel.IsChainDisablable(ev)
+end
+
+function s.solveop(e, tp, eg, ep, ev, re, r, rp)
+	Duel.NegateEffect(ev)
 end

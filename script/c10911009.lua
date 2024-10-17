@@ -6,7 +6,7 @@ function s.initial_effect(c)
 	local e1 = Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id, 0))
 	e1:SetProperty(EFFECT_FLAG_DELAY)
-	e1:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_TRIGGER_O)
+	e1:SetType(EFFECT_TYPE_QUICK_O)
 	e1:SetCode(EVENT_CHAINING)
 	e1:SetRange(LOCATION_HAND)
 	e1:SetCountLimit(1, id)
@@ -125,6 +125,14 @@ function s.fsop(e, tp, eg, ep, ev, re, r, rp)
 		tc:CompleteProcedure()
 	end
 	aux.FCheckAdditional = nil
+end
+
+function s.discon1(e, tp, eg, ep, ev, re, r, rp)
+	return s.ActivateCheck()
+end
+
+function s.discon2(e, tp, eg, ep, ev, re, r, rp)
+	return not s.ActivateCheck()
 end
 
 function s.disfilter(c, e, tp)

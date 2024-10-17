@@ -181,5 +181,7 @@ end
 
 function s.repop(e, tp, eg, ep, ev, re, r, rp)
 	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
-	Duel.Draw(tp, 1, REASON_EFFECT)
+	if Duel.IsPlayerCanDraw(tp, 1) then
+		Duel.Draw(tp, 1, REASON_EFFECT)
+	end
 end

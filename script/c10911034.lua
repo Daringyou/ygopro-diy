@@ -312,6 +312,6 @@ function s.ctcon(e, tp, eg, ep, ev, re, r, rp)
 end
 
 function s.ctop(e, tp, eg, ep, ev, re, r, rp)
-	Duel.Hint(HINT_CARD, tp, id)
+	Duel.Hint(HINT_CARD, tp, e:GetHandler():GetOriginalCode())
 	e:GetHandler():AddCounter(0x1091, 1)
 end

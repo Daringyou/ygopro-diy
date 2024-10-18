@@ -127,7 +127,6 @@ function s.spop(e, tp, eg, ep, ev, re, r, rp)
 	if g:GetCount() > 0 and Duel.SpecialSummon(g, 0, tp, tp, false, false, POS_FACEUP) > 0
 		and Duel.IsPlayerCanDiscardDeck(tp, 1) then
 		Duel.BreakEffect()
-		Duel.DisableShuffleCheck()
 		Duel.DiscardDeck(tp, 3, REASON_EFFECT)
 	end
 end

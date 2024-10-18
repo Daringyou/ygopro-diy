@@ -127,7 +127,6 @@ function s.thop(e, tp, eg, ep, ev, re, r, rp)
 		Duel.ConfirmCards(1 - tp, g)
 		if Duel.IsPlayerCanDiscardDeck(tp, 1) then
 			Duel.BreakEffect()
-			Duel.DisableShuffleCheck()
 			Duel.DiscardDeck(tp, 3, REASON_EFFECT)
 		end
 	end

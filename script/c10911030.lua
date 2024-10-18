@@ -176,36 +176,51 @@ end
 function s.thfilter(c)
 	return c:IsType(TYPE_MONSTER) and c:IsLevel(4) and c:IsAbleToHand()
 end
+function s.costfilter(c, tp, list)
+	local ct = list and list[c] or 0
+	return c:IsCanRemoveCounter(tp, 0x1091, ct + 1, REASON_COST)
+end
 
 function s.thtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	if chk == 0 then
 		return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
 			and Duel.IsExistingMatchingCard(s.thfilter, tp, LOCATION_DECK, 0, 1, nil)
 	end
-	local g = Duel.GetMatchingGroup(s.thfilter, tp, LOCATION_DECK, 0, nil)
-	local ct = 1
-	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
-	if g:GetClassCount(Card.GetCode) > 1 and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST) then
+	local ct = 0
+	local min = 1
+	local max = 2
+	local list = {}
+	local g = Duel.GetMatchingGroup(s.thfilter,tp,LOCATION_DECK,0,nil)
+	local gclass = math.min(g:GetClassCount(Card.GetCode), max)
+	local og = Group.CreateGroup()
+	while ct + 1 <= gclass and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
 		Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 2))
-		local sg = Duel.SelectMatchingCard(tp, Card.IsCanRemoveCounter, tp, LOCATION_ONFIELD, 0, 0, 1, nil, tp, 0x1091, 1, REASON_COST)
-		if sg and sg:GetCount() == 1 then
-			ct = ct + 1
-			sg:GetFirst():RemoveCounter(tp, 0x1091, 1, REASON_COST)
-		end
+		local sg = Duel.SelectMatchingCard(tp, s.costfilter, tp, LOCATION_ONFIELD, 0, min, 1, nil, tp, list)
+		if not sg or sg:GetCount() == 0 then break end
+		og:Merge(sg)
+		local sc = sg:GetFirst()
+		if not list[sc] then list[sc] = 0 end
+		list[sc] = list[sc] + 1
+		ct = ct + 1
+		if min ~= 0 then min = 0 end
+	end
+	for tc in aux.Next(og) do
+		tc:RemoveCounter(tp, 0x1091, list[tc], REASON_COST)
 	end
 	e:SetLabel(ct)
 	Duel.SetOperationInfo(0, CATEGORY_TOHAND, nil, ct, tp, LOCATION_DECK)
 end
 
 function s.thop(e, tp, eg, ep, ev, re, r, rp)
+	local ct = e:GetLabel()
 	local g = Duel.GetMatchingGroup(s.thfilter, tp, LOCATION_DECK, 0, nil)
-	local ct = math.min(e:GetLabel(), g:GetClassCount(Card.GetCode))
-	if g:GetCount() == 0 or ct <= 0 then return end
 	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_ATOHAND)
-	local tg = g:SelectSubGroup(tp, aux.dncheck, false, ct, ct)
-	if tg:GetCount() > 0 then
-		Duel.SendtoHand(tg, nil, REASON_EFFECT)
-		Duel.ConfirmCards(1 - tp, tg)
+	aux.GCheckAdditional = aux.dncheck
+	local sg = g:SelectSubGroup(tp, aux.TRUE, false, ct, ct)
+	aux.GCheckAdditional = nil
+	if sg:GetCount() > 0 then
+		Duel.SendtoHand(sg, nil, REASON_EFFECT)
+		Duel.ConfirmCards(1 - tp, sg)
 	end
 end
 

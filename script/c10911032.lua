@@ -147,51 +147,79 @@ function s.PrivateEffect(c)
 	--效果免疫
 	local e1 = Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id, 0))
-	e1:SetCategory(CATEGORY_DESTROY)
-	e1:SetProperty(EFFECT_FLAG_DAMAGE_STEP + EFFECT_FLAG_DAMAGE_CAL)
+	e1:SetCategory(CATEGORY_REMOVE)
+	e1:SetProperty(EFFECT_FLAG_DAMAGE_STEP + EFFECT_FLAG_DAMAGE_CAL+EFFECT_FLAG_CARD_TARGET)
 	e1:SetType(EFFECT_TYPE_QUICK_O)
 	e1:SetCode(EVENT_CHAINING)
 	e1:SetRange(LOCATION_MZONE)
-	e1:SetCondition(s.descon)
-	e1:SetCost(s.descost)
-	e1:SetTarget(s.destg)
-	e1:SetOperation(s.desop)
+	e1:SetCondition(s.imcon)
+	e1:SetTarget(s.imtg)
+	e1:SetOperation(s.imop)
 	c:RegisterEffect(e1)
 end
 
-function s.descon(e,tp,eg,ep,ev,re,r,rp)
-	return re:GetHandlerPlayer()~=e:GetHandlerPlayer()
+function s.imcon(e,tp,eg,ep,ev,re,r,rp)
+	return rp ~= tp
 end
-function s.descost(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST) end
-	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
+function s.gcheck(tp)
+	return	function(g)
+				return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, #g, REASON_COST)
+			end
 end
-function s.destg(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return true end
-	local g=Duel.GetMatchingGroup(Card.IsDestructable,tp,0,LOCATION_ONFIELD,nil)
-	Duel.SetOperationInfo(0,CATEGORY_DESTROY,g,1,0,0)
+function s.costfilter(c, tp, list)
+	local ct = list and list[c] or 0
+	return c:IsCanRemoveCounter(tp, 0x1091, ct + 1, REASON_COST)
 end
-function s.desop(e,tp,eg,ep,ev,re,r,rp)
+function s.imtg(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
+	if chkc then return chkc:IsOnField() and chkc:IsControler(tp) end
+	if chk==0 then return Duel.IsExistingTarget(aux.TRUE,tp,LOCATION_ONFIELD,0,1,nil)
+		and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
+	end
+	local ct = 0
+	local min = 1
+	local list = {}
+	local og = Group.CreateGroup()
+	local max = Duel.GetTargetCount(aux.TRUE, tp, LOCATION_ONFIELD, 0, nil)
+	while ct + 1 <= max and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
+		Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 1))
+		local sg = Duel.SelectMatchingCard(tp, s.costfilter, tp, LOCATION_ONFIELD, 0, min, 1, nil, tp, list)
+		if not sg or sg:GetCount() == 0 then break end
+		og:Merge(sg)
+		local sc = sg:GetFirst()
+		if not list[sc] then list[sc] = 0 end
+		list[sc] = list[sc] + 1
+		ct = ct + 1
+		if min ~= 0 then min = 0 end
+	end
+	for tc in aux.Next(og) do
+		tc:RemoveCounter(tp, 0x1091, list[tc], REASON_COST)
+	end
+	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_TARGET)
+	Duel.SelectTarget(tp,aux.TRUE,tp,LOCATION_ONFIELD,0,ct,ct,nil)
+	e:SetLabel(re:GetHandler():GetOriginalCode())
+end
+function s.imop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
-	if c:IsRelateToEffect(e) then
+	local g = Duel.GetTargetsRelateToChain():Filter(Card.IsRelateToEffect,nil,e)
+	for tc in aux.Next(g) do
 		local e1=Effect.CreateEffect(c)
-		e1:SetProperty(EFFECT_FLAG_SINGLE_RANGE+EFFECT_FLAG_CANNOT_DISABLE)
 		e1:SetType(EFFECT_TYPE_SINGLE)
 		e1:SetCode(EFFECT_IMMUNE_EFFECT)
-		e1:SetRange(LOCATION_MZONE)
 		e1:SetValue(s.efilter)
+		e1:SetLabel(e:GetLabel())
 		e1:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END)
-		e1:SetLabelObject(re)
-		c:RegisterEffect(e1)
+		tc:RegisterEffect(e1)
 	end
 	Duel.BreakEffect()
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
-	local g=Duel.SelectMatchingCard(tp,Card.IsDestructable,tp,0,LOCATION_ONFIELD,1,1,nil)
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_REMOVE)
+	local g=Duel.SelectMatchingCard(tp,Card.IsAbleToRemove,tp,0,LOCATION_ONFIELD,1,1,nil)
 	if g:GetCount()>0 then
 		Duel.HintSelection(g)
-		Duel.Destroy(g,REASON_EFFECT)
+		Duel.Remove(g, POS_FACEUP, REASON_EFFECT)
 	end
 end
 function s.efilter(e,re)
-	return re == e:GetLabelObject()
+	local rc = re:GetHandler()
+	return re:GetOwnerPlayer() ~= e:GetHandlerPlayer()
+		and rc:IsOriginalCodeRule(e:GetLabel())
 end

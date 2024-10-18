@@ -115,8 +115,8 @@ end
 function s.Calculate()
 	local g = Duel.GetMatchingGroup(s.CalculateFilter, tp, LOCATION_MZONE, LOCATION_MZONE, nil)
 	if g:GetCount() == 0 then return end
-	local code_sub = aux.SkyCodeSub			  --累计取除指示物数量
-	local code_now = aux.SkyCodeNow			  --当前放置的指示物数量
+	local code_sub = aux.SkyCodeSub              --累计取除指示物数量
+	local code_now = aux.SkyCodeNow              --当前放置的指示物数量
 	for tc in aux.Next(g) do
 		local ct_sub = tc:GetFlagEffectLabel(code_sub) --该flag为指示物累计下降数值的计数器
 		local ct_now = tc:GetFlagEffectLabel(code_now) --该flag为指示物标识器,滞后于实际指示物变化
@@ -148,7 +148,7 @@ function s.PrivateEffect(c)
 	local e1 = Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id, 0))
 	e1:SetCategory(CATEGORY_REMOVE)
-	e1:SetProperty(EFFECT_FLAG_DAMAGE_STEP + EFFECT_FLAG_DAMAGE_CAL+EFFECT_FLAG_CARD_TARGET)
+	e1:SetProperty(EFFECT_FLAG_DAMAGE_STEP + EFFECT_FLAG_DAMAGE_CAL + EFFECT_FLAG_CARD_TARGET)
 	e1:SetType(EFFECT_TYPE_QUICK_O)
 	e1:SetCode(EVENT_CHAINING)
 	e1:SetRange(LOCATION_MZONE)
@@ -158,22 +158,26 @@ function s.PrivateEffect(c)
 	c:RegisterEffect(e1)
 end
 
-function s.imcon(e,tp,eg,ep,ev,re,r,rp)
+function s.imcon(e, tp, eg, ep, ev, re, r, rp)
 	return rp ~= tp
 end
+
 function s.gcheck(tp)
-	return	function(g)
-				return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, #g, REASON_COST)
-			end
+	return function(g)
+		return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, #g, REASON_COST)
+	end
 end
+
 function s.costfilter(c, tp, list)
 	local ct = list and list[c] or 0
 	return c:IsCanRemoveCounter(tp, 0x1091, ct + 1, REASON_COST)
 end
-function s.imtg(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
+
+function s.imtg(e, tp, eg, ep, ev, re, r, rp, chk, chkc)
 	if chkc then return chkc:IsOnField() and chkc:IsControler(tp) end
-	if chk==0 then return Duel.IsExistingTarget(aux.TRUE,tp,LOCATION_ONFIELD,0,1,nil)
-		and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
+	if chk == 0 then
+		return Duel.IsExistingTarget(aux.TRUE, tp, LOCATION_ONFIELD, 0, 1, nil)
+			and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
 	end
 	local ct = 0
 	local min = 1
@@ -195,30 +199,32 @@ function s.imtg(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
 		tc:RemoveCounter(tp, 0x1091, list[tc], REASON_COST)
 	end
 	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_TARGET)
-	Duel.SelectTarget(tp,aux.TRUE,tp,LOCATION_ONFIELD,0,ct,ct,nil)
+	Duel.SelectTarget(tp, aux.TRUE, tp, LOCATION_ONFIELD, 0, ct, ct, nil)
 	e:SetLabel(re:GetHandler():GetOriginalCode())
 end
-function s.imop(e,tp,eg,ep,ev,re,r,rp)
-	local c=e:GetHandler()
-	local g = Duel.GetTargetsRelateToChain():Filter(Card.IsRelateToEffect,nil,e)
+
+function s.imop(e, tp, eg, ep, ev, re, r, rp)
+	local c = e:GetHandler()
+	local g = Duel.GetTargetsRelateToChain():Filter(Card.IsRelateToEffect, nil, e)
 	for tc in aux.Next(g) do
-		local e1=Effect.CreateEffect(c)
+		local e1 = Effect.CreateEffect(c)
 		e1:SetType(EFFECT_TYPE_SINGLE)
 		e1:SetCode(EFFECT_IMMUNE_EFFECT)
 		e1:SetValue(s.efilter)
 		e1:SetLabel(e:GetLabel())
-		e1:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END)
+		e1:SetReset(RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END)
 		tc:RegisterEffect(e1)
 	end
 	Duel.BreakEffect()
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_REMOVE)
-	local g=Duel.SelectMatchingCard(tp,Card.IsAbleToRemove,tp,0,LOCATION_ONFIELD,1,1,nil)
-	if g:GetCount()>0 then
+	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_REMOVE)
+	local g = Duel.SelectMatchingCard(tp, Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, 1, 1, nil)
+	if g:GetCount() > 0 then
 		Duel.HintSelection(g)
 		Duel.Remove(g, POS_FACEUP, REASON_EFFECT)
 	end
 end
-function s.efilter(e,re)
+
+function s.efilter(e, re)
 	local rc = re:GetHandler()
 	return re:GetOwnerPlayer() ~= e:GetHandlerPlayer()
 		and rc:IsOriginalCodeRule(e:GetLabel())

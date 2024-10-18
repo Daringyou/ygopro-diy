@@ -176,6 +176,7 @@ end
 function s.thfilter(c)
 	return c:IsType(TYPE_MONSTER) and c:IsLevel(4) and c:IsAbleToHand()
 end
+
 function s.costfilter(c, tp, list)
 	local ct = list and list[c] or 0
 	return c:IsCanRemoveCounter(tp, 0x1091, ct + 1, REASON_COST)
@@ -190,7 +191,7 @@ function s.thtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	local min = 1
 	local max = 2
 	local list = {}
-	local g = Duel.GetMatchingGroup(s.thfilter,tp,LOCATION_DECK,0,nil)
+	local g = Duel.GetMatchingGroup(s.thfilter, tp, LOCATION_DECK, 0, nil)
 	local gclass = math.min(g:GetClassCount(Card.GetCode), max)
 	local og = Group.CreateGroup()
 	while ct + 1 <= gclass and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do

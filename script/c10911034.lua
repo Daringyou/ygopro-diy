@@ -250,6 +250,8 @@ end
 
 function s.remop(e, tp, eg, ep, ev, re, r, rp)
 	local p, d = Duel.GetChainInfo(0, CHAININFO_TARGET_PLAYER, CHAININFO_TARGET_PARAM)
+	local g = Duel.GetDecktopGroup(p, d)
+	--[[
 	local g = Duel.GetFieldGroup(p, LOCATION_DECK, 0)
 	if g:GetCount() == 0 then return end
 	local seq = -1
@@ -260,9 +262,10 @@ function s.remop(e, tp, eg, ep, ev, re, r, rp)
 	end
 	local sg = g:Filter(s.remcheck, nil, seq)
 	local og = Duel.GetDecktopGroup(p, math.min(d, sg:GetCount()))
-	if og:GetCount() > 0 then
+	--]]
+	if g:GetCount() > 0 then
 		Duel.DisableShuffleCheck()
-		local ct = Duel.Remove(og, POS_FACEDOWN, REASON_EFFECT)
+		local ct = Duel.Remove(g, POS_FACEDOWN, REASON_EFFECT)
 		local e1 = Effect.CreateEffect(e:GetHandler())
 		e1:SetType(EFFECT_TYPE_FIELD)
 		e1:SetCode(EFFECT_UPDATE_ATTACK)

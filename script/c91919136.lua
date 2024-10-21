@@ -148,7 +148,7 @@ function s.PrivateEffect(c)
 	e3:SetCode(EFFECT_UPDATE_ATTACK)
 	e3:SetRange(LOCATION_MZONE)
 	e3:SetTargetRange(LOCATION_MZONE, 0)
-	e3:SetTarget(aux.TargetBoolFunction(Card.IsLevel, 4))
+	e3:SetTarget(s.atktg)
 	e3:SetValue(s.atkval)
 	c:RegisterEffect(e3)
 	Duel.AddCustomActivityCounter(id, ACTIVITY_CHAIN, s.ChainCheck)
@@ -209,6 +209,9 @@ function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 	if ft == 3 then
 
 	end
+end
+function s.atktg(e, c)
+	return c:GetFlagEffect(aux.SkyCode) > 0
 end
 
 function s.atkval(e, c)

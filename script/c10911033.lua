@@ -176,7 +176,8 @@ function s.tdtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	local min = 1
 	local list = {}
 	local og = Group.CreateGroup()
-	local max = Duel.GetMatchingGroupCount(Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, nil)
+	local gct = Duel.GetMatchingGroupCount(Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, nil)
+	local max = math.min(gct, 2)
 	while ct + 1 <= max and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
 		Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 1))
 		local sg = Duel.SelectMatchingCard(tp, s.costfilter, tp, LOCATION_ONFIELD, 0, min, 1, nil, tp, list)

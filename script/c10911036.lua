@@ -200,6 +200,7 @@ function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 		e1:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
 		e1:SetCode(EVENT_CHAIN_SOLVING)
 		e1:SetCondition(s.drcon)
+		e1:SetTarget(s.drtg)
 		e1:SetOperation(s.drop)
 		Duel.RegisterEffect(e1, tp)
 	end
@@ -230,7 +231,13 @@ function s.drcon(e, tp, eg, ep, ev, re, r, rp)
 		and tg and tg:IsExists(s.drfilter, 1, nil, tp)
 end
 
+function s.drtg(e, tp, eg, ep, ev, re, r, rp, chk)
+	if chk == 0 then return Duel.GetFlagEffect(tp, id) == 0 end
+	Duel.RegisterFlagEffect(tp, id, RESET_CHAIN, 0, 1)
+end
+
 function s.drop(e, tp, eg, ep, ev, re, r, rp)
+	Duel.ResetFlagEffect(tp, id)
 	Duel.Hint(HINT_CARD, 0, id)
 	Duel.Draw(tp, 1, REASON_EFFECT)
 end

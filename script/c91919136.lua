@@ -204,12 +204,13 @@ function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 		Duel.RegisterEffect(e1, tp)
 	end
 	if ft >= 2 then
-		
+
 	end
 	if ft == 3 then
 
 	end
 end
+
 function s.atktg(e, c)
 	return c:GetFlagEffect(aux.SkyCode) > 0
 end
@@ -230,5 +231,6 @@ function s.drcon(e, tp, eg, ep, ev, re, r, rp)
 end
 
 function s.drop(e, tp, eg, ep, ev, re, r, rp)
+	Duel.Hint(HINT_CARD, 0, id)
 	Duel.Draw(tp, 1, REASON_EFFECT)
 end

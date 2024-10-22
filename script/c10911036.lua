@@ -195,10 +195,20 @@ function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 	local ft = e:GetLabel()
 	if ft >= 1 then
 		--抽卡
+		--[[
 		local e1 = Effect.CreateEffect(c)
 		e1:SetDescription(aux.Stringid(id, 1))
 		e1:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
 		e1:SetCode(EVENT_CHAIN_SOLVING)
+		e1:SetCondition(s.drcon)
+		e1:SetTarget(s.drtg)
+		e1:SetOperation(s.drop)
+		Duel.RegisterEffect(e1, tp)
+		--]]
+		local e1 = Effect.CreateEffect(c)
+		e1:SetDescription(aux.Stringid(id, 1))
+		e1:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+		e1:SetCode(EVENT_BECOME_TARGET)
 		e1:SetCondition(s.drcon)
 		e1:SetTarget(s.drtg)
 		e1:SetOperation(s.drop)
@@ -220,6 +230,7 @@ function s.atkval(e, c)
 	return aux.SkyCodePlayer[e:GetHandlerPlayer()] * 100
 end
 
+--[[
 function s.drfilter(c, tp)
 	return c:IsControler(tp) and c:IsOnField()
 end
@@ -229,6 +240,27 @@ function s.drcon(e, tp, eg, ep, ev, re, r, rp)
 	local tg = Duel.GetChainInfo(ev, CHAININFO_TARGET_CARDS)
 	return rp == 1 - tp and re:IsHasProperty(EFFECT_FLAG_CARD_TARGET)
 		and tg and tg:IsExists(s.drfilter, 1, nil, tp)
+end
+
+function s.drtg(e, tp, eg, ep, ev, re, r, rp, chk)
+	if chk == 0 then return Duel.GetFlagEffect(tp, id) == 0 end
+	Duel.RegisterFlagEffect(tp, id, RESET_CHAIN, 0, 1)
+end
+
+function s.drop(e, tp, eg, ep, ev, re, r, rp)
+	Duel.ResetFlagEffect(tp, id)
+	Duel.Hint(HINT_CARD, 0, id)
+	Duel.Draw(tp, 1, REASON_EFFECT)
+end
+--]]
+function s.drfilter(c, tp)
+	return c:IsControler(tp) and c:IsOnField()
+		and (c:IsFaceup() or c:IsPublic())
+end
+
+function s.drcon(e, tp, eg, ep, ev, re, r, rp)
+	if not Duel.IsPlayerCanDraw(tp, 1) then return false end
+	return re and rp == 1 - tp and eg:IsExists(s.drfilter, 1, nil, tp)
 end
 
 function s.drtg(e, tp, eg, ep, ev, re, r, rp, chk)

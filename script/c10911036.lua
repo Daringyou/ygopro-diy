@@ -270,6 +270,7 @@ end
 
 function s.drop(e, tp, eg, ep, ev, re, r, rp)
 	Duel.ResetFlagEffect(tp, id)
+	local ct = eg:FilterCount(s.drfilter, nil, tp)
 	Duel.Hint(HINT_CARD, 0, id)
-	Duel.Draw(tp, 1, REASON_EFFECT)
+	Duel.Draw(tp, ct, REASON_EFFECT)
 end

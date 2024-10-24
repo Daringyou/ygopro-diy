@@ -27,7 +27,7 @@ function s.PublicEffect(c)
 	c:RegisterEffect(e1)
 	local e2 = Effect.CreateEffect(c)
 	e2:SetDescription(aux.Stringid(id, 0))
-	e2:SetCategory(CATEGORY_SPECIAL_SUMMON)
+	e2:SetCategory(CATEGORY_DRAW)
 	e2:SetType(EFFECT_TYPE_IGNITION)
 	e2:SetRange(LOCATION_HAND)
 	e2:SetCountLimit(1, EFFECT_COUNT_CODE_CHAIN)
@@ -82,7 +82,7 @@ function s.PrivateEffect(c)
 	--特殊召唤
 	local e1 = Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id, 2))
-	e1:SetCategory(CATEGORY_SPECIAL_SUMMON + CATEGORY_DECKDES)
+	e1:SetCategory(CATEGORY_DRAW + CATEGORY_DECKDES)
 	e1:SetType(EFFECT_TYPE_IGNITION)
 	e1:SetRange(LOCATION_MZONE)
 	e1:SetCountLimit(1, id)
@@ -107,13 +107,9 @@ function s.spcon2(e, tp, eg, ep, ev, re, r, rp)
 end
 
 function s.sptg(e, tp, eg, ep, ev, re, r, rp, chk)
-	if chk == 0 then
-		return Duel.GetLocationCount(tp, LOCATION_MZONE) > 0
-			and Duel.IsPlayerCanDiscardDeck(tp, 3)
-			and Duel.IsExistingMatchingCard(s.spfilter, tp, LOCATION_HAND, 0, 1, nil, e, tp)
-	end
+	if chk==0 then return Duel.IsPlayerCanDraw(tp, 1) and Duel.IsPlayerCanDiscardDeck(tp, 3) end
+	Duel.SetOperationInfo(0, CATEGORY_DRAW, nil, 0, tp, 1)
 	Duel.SetOperationInfo(0, CATEGORY_DECKDES, nil, 0, tp, 3)
-	Duel.SetOperationInfo(0, CATEGORY_SPECIAL_SUMMON, nil, 1, tp, LOCATION_HAND)
 end
 
 function s.spfilter(c, e, tp)
@@ -121,12 +117,13 @@ function s.spfilter(c, e, tp)
 end
 
 function s.spop(e, tp, eg, ep, ev, re, r, rp)
-	if Duel.GetLocationCount(tp, LOCATION_MZONE) <= 0 then return end
-	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_SPSUMMON)
-	local g = Duel.SelectMatchingCard(tp, s.spfilter, tp, LOCATION_HAND, 0, 1, 1, nil, e, tp)
-	if g:GetCount() > 0 and Duel.SpecialSummon(g, 0, tp, tp, false, false, POS_FACEUP) > 0
-		and Duel.IsPlayerCanDiscardDeck(tp, 1) then
+	if Duel.Draw(tp, 1, REASON_EFFECT) > 0 and Duel.DiscardDeck(tp, 3, REASON_EFFECT) > 0 then
 		Duel.BreakEffect()
-		Duel.DiscardDeck(tp, 3, REASON_EFFECT)
+		local g = Duel.GetMatchingGroup(s.spfilter, tp, LOCATION_HAND, 0, nil, e, tp)
+		if g:GetCount() > 0 and Duel.GetLocationCount(tp, LOCATION_MZONE) > 0 and Duel.SelectYesNo(tp, aux.Stringid(id, 3)) then
+			Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_SPSUMMON)
+			local sg = g:Select(tp, 1, 1, nil)
+			Duel.SpecialSummon(sg, 0, tp, tp, false, false, POS_FACEUP)
+		end
 	end
 end

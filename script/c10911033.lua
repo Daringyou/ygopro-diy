@@ -166,7 +166,20 @@ function s.costfilter(c, tp, list)
 	local ct = list and list[c] or 0
 	return c:IsCanRemoveCounter(tp, 0x1091, ct + 1, REASON_COST)
 end
-
+--
+function s.tdtg(e, tp, eg, ep, ev, re, r, rp, chk)
+	if chk == 0 then return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 4, REASON_COST) end
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
+	Duel.Draw(tp,1,REASON_COST)
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
+	Duel.Draw(tp,1,REASON_COST)
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
+	Duel.Draw(tp,1,REASON_COST)
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
+	Duel.Draw(tp,1,REASON_COST)
+end
+--]]
+--[[
 function s.tdtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	if chk == 0 then
 		return Duel.IsExistingMatchingCard(Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, 1, nil)
@@ -195,9 +208,10 @@ function s.tdtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	e:SetLabel(ct)
 	Duel.SetOperationInfo(0, CATEGORY_REMOVE, nil, ct, 1 - tp, LOCATION_ONFIELD)
 end
-
+--]]
 function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 	local ct = e:GetLabel()
+	if ct == 0 then return end
 	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_REMOVE)
 	local g = Duel.SelectMatchingCard(tp, Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, ct, ct, nil)
 	if g:GetCount() > 0 then

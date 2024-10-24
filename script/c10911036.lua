@@ -248,10 +248,13 @@ function s.drtg(e, tp, eg, ep, ev, re, r, rp, chk)
 end
 
 function s.drop(e, tp, eg, ep, ev, re, r, rp)
-	Duel.ResetFlagEffect(tp, id)
+	--Duel.ResetFlagEffect(tp, id)
+	local tg = Duel.GetChainInfo(ev, CHAININFO_TARGET_CARDS)
+	local ct = tg:FilterCount(s.drfilter, nil, tp)
 	Duel.Hint(HINT_CARD, 0, id)
-	Duel.Draw(tp, 1, REASON_EFFECT)
+	Duel.Draw(tp, ct, REASON_EFFECT)
 end
+
 --[[
 function s.drfilter(c, tp)
 	return c:IsControler(tp) and c:IsOnField()

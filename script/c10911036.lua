@@ -195,16 +195,15 @@ function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 	local ft = e:GetLabel()
 	if ft >= 1 then
 		--抽卡
-		--[[
 		local e1 = Effect.CreateEffect(c)
 		e1:SetDescription(aux.Stringid(id, 1))
 		e1:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
 		e1:SetCode(EVENT_CHAIN_SOLVING)
 		e1:SetCondition(s.drcon)
-		e1:SetTarget(s.drtg)
+		--e1:SetTarget(s.drtg)
 		e1:SetOperation(s.drop)
 		Duel.RegisterEffect(e1, tp)
-		--]]
+		--[[
 		local e1 = Effect.CreateEffect(c)
 		e1:SetDescription(aux.Stringid(id, 1))
 		e1:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
@@ -213,6 +212,7 @@ function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 		e1:SetTarget(s.drtg)
 		e1:SetOperation(s.drop)
 		Duel.RegisterEffect(e1, tp)
+		--]]
 	end
 	if ft >= 2 then
 
@@ -230,7 +230,7 @@ function s.atkval(e, c)
 	return aux.SkyCodePlayer[e:GetHandlerPlayer()] * 100
 end
 
---[[
+--
 function s.drfilter(c, tp)
 	return c:IsControler(tp) and c:IsOnField()
 end
@@ -252,7 +252,7 @@ function s.drop(e, tp, eg, ep, ev, re, r, rp)
 	Duel.Hint(HINT_CARD, 0, id)
 	Duel.Draw(tp, 1, REASON_EFFECT)
 end
---]]
+--[[
 function s.drfilter(c, tp)
 	return c:IsControler(tp) and c:IsOnField()
 		and (c:IsFaceup() or c:IsPublic())
@@ -274,3 +274,4 @@ function s.drop(e, tp, eg, ep, ev, re, r, rp)
 	Duel.Hint(HINT_CARD, 0, id)
 	Duel.Draw(tp, ct, REASON_EFFECT)
 end
+--]]

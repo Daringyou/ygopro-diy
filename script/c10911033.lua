@@ -183,8 +183,9 @@ function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 		if tc and tc:IsLocation(LOCATION_REMOVED) then
 			local rtype = bit.band(tc:GetType(), 0x7)
 			Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_ATOHAND)
-			local sg = Duel.SelectMatchingCard(tp, Card.IsType, tp, LOCATION_DECK, 0, 1, 1, nil, rtype)
+			local sg = Duel.SelectMatchingCard(tp, Card.IsType, tp, LOCATION_GRAVE, 0, 1, 1, nil, rtype)
 			if sg:GetCount() > 0 then
+				Duel.BreakEffect()
 				Duel.SendtoHand(sg, nil, REASON_EFFECT)
 				Duel.ConfirmCards(1 - tp, sg)
 			end

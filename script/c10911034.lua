@@ -197,6 +197,10 @@ function s.PrivateEffect(c)
 	c:RegisterEffect(ge4)
 end
 
+function s.remfilter(c, seq)
+	return c:GetSequence() == seq
+end
+
 function s.remtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	if chk == 0 then
 		local g = Duel.GetDecktopGroup(1 - tp, 1)
@@ -206,13 +210,13 @@ function s.remtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	end
 	local ct = 0
 	local list = {}
-	local g = Duel.GetDecktopGroup(1 - tp, 1)
-	local tc = g:GetFirst()
+	local g = Duel.GetFieldGroup(tp, 0, LOCATION_DECK)
+	local gct = g:GetCount()
+	local tc = g:Filter(s.remfilter, nil, gct - ct - 1):GetFirst()
 	while tc and tc:IsAbleToRemove() and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
 		ct = ct + 1
 		list[ct] = ct
-		g = Duel.GetDecktopGroup(1 - tp, ct + 1) - g
-		tc = g:GetFirst()
+		tc = g:Filter(s.remfilter, nil, gct - ct - 1):GetFirst()
 	end
 	Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 5))
 	local ac = Duel.AnnounceNumber(tp, table.unpack(list))

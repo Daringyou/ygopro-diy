@@ -176,19 +176,16 @@ end
 function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_REMOVE)
 	local g = Duel.SelectMatchingCard(tp, Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, 1, 1, nil)
-	if g:GetCount() > 0 then
-		Duel.HintSelection(g)
-		Duel.Remove(g, POS_FACEUP, REASON_EFFECT)
-		local tc = g:GetFirst()
-		if tc and tc:IsLocation(LOCATION_REMOVED) then
-			local rtype = bit.band(tc:GetType(), 0x7)
-			Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_ATOHAND)
-			local sg = Duel.SelectMatchingCard(tp, Card.IsType, tp, LOCATION_GRAVE, 0, 1, 1, nil, rtype)
-			if sg:GetCount() > 0 then
-				Duel.BreakEffect()
-				Duel.SendtoHand(sg, nil, REASON_EFFECT)
-				Duel.ConfirmCards(1 - tp, sg)
-			end
-		end
-	end
+	if g:GetCount() == 0 then return end
+	Duel.HintSelection(g)
+	Duel.Remove(g, POS_FACEUP, REASON_EFFECT)
+	local tc = g:GetFirst()
+	if not tc:IsLocation(LOCATION_REMOVED) then return end
+	local rtype = bit.band(tc:GetType(), 0x7)
+	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_ATOHAND)
+	local sg = Duel.SelectMatchingCard(tp, Card.IsType, tp, LOCATION_GRAVE, 0, 1, 1, nil, rtype)
+	if sg:GetCount() == 0 then return end
+	Duel.BreakEffect()
+	Duel.SendtoHand(sg, nil, REASON_EFFECT)
+	Duel.ConfirmCards(1 - tp, sg)
 end

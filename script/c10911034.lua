@@ -134,7 +134,7 @@ function s.PrivateEffect(c)
 	e0:SetCode(EVENT_FREE_CHAIN)
 	e0:SetRange(LOCATION_MZONE)
 	e0:SetHintTiming(TIMINGS_CHECK_MONSTER + TIMING_BATTLE_PHASE)
-	e0:SetCountLimit(1, EFFECT_COUNT_CODE_CHAIN)
+	e0:SetCountLimit(1)
 	e0:SetTarget(s.remtg)
 	e0:SetOperation(s.remop)
 	c:RegisterEffect(e0)
@@ -197,72 +197,34 @@ function s.PrivateEffect(c)
 	c:RegisterEffect(ge4)
 end
 
-function s.remfilter(c, tp, list)
-	local ct = list and list[c] or 0
-	return c:GetFlagEffect(id) == 0 and c:IsCanRemoveCounter(tp, 0x1091, ct + 1, REASON_COST)
-end
-
-function s.seqfilter(c, seq)
-	return c:GetSequence() == seq
-end
-
 function s.remtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	if chk == 0 then
 		local g = Duel.GetDecktopGroup(1 - tp, 1)
 		local tc = g:GetFirst()
 		return tc and tc:IsAbleToRemove()
-			and Duel.IsExistingMatchingCard(s.remfilter, tp, LOCATION_ONFIELD, 0, 1, nil, tp)
+			and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
 	end
 	local ct = 0
-	local min = 1
 	local list = {}
-	local og = Group.CreateGroup()
-	local g = Duel.GetFieldGroup(tp, 0, LOCATION_DECK)
-	local deckct = g:GetCount()
-	local tc = g:Filter(s.seqfilter, nil, deckct - ct - 1):GetFirst()
+	local g = Duel.GetDecktopGroup(1 - tp, 1)
+	local tc = g:GetFirst()
 	while tc and tc:IsAbleToRemove() and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
-		Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 5))
-		local sg = Duel.SelectMatchingCard(tp, s.remfilter, tp, LOCATION_ONFIELD, 0, min, 1, nil, tp, list)
-		if not sg or sg:GetCount() == 0 then break end
 		ct = ct + 1
-		local sc = sg:GetFirst()
-		if not list[sc] then list[sc] = 0 end
-		list[sc] = list[sc] + 1
-		og:Merge(sg)
-		if min ~= 0 then min = 0 end
-		tc = g:Filter(s.seqfilter, nil, deckct - ct - 1):GetFirst()
+		list[ct] = ct
+		g = Duel.GetDecktopGroup(1 - tp, ct + 1) - g
+		tc = g:GetFirst()
 	end
-	for oc in aux.Next(og) do
-		if oc:GetFlagEffect(id) == 0 then
-			oc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, EFFECT_FLAG_CLIENT_HINT, 1,
-				0, aux.Stringid(id, 6))
-		end
-		oc:RemoveCounter(tp, 0x1091, list[oc], REASON_COST)
-	end
+	Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 5))
+	local ac = Duel.AnnounceNumber(tp, table.unpack(list))
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, ac, REASON_COST)
 	Duel.SetTargetPlayer(1 - tp)
-	Duel.SetTargetParam(ct)
-	Duel.SetOperationInfo(0, CATEGORY_REMOVE, nil, ct, 1 - tp, LOCATION_DECK)
-end
-
-function s.remcheck(c, seq)
-	return c:GetSequence() > seq
+	Duel.SetTargetParam(ac)
+	Duel.SetOperationInfo(0, CATEGORY_REMOVE, nil, ac, 1 - tp, LOCATION_DECK)
 end
 
 function s.remop(e, tp, eg, ep, ev, re, r, rp)
 	local p, d = Duel.GetChainInfo(0, CHAININFO_TARGET_PLAYER, CHAININFO_TARGET_PARAM)
 	local g = Duel.GetDecktopGroup(p, d)
-	--[[
-	local g = Duel.GetFieldGroup(p, LOCATION_DECK, 0)
-	if g:GetCount() == 0 then return end
-	local seq = -1
-	local rg = g:Filter(aux.NOT(Card.IsAbleToRemove), nil)
-	if rg:GetCount() > 0 then
-		local _, maxseq = rg:GetMaxGroup(Card.GetSequence)
-		seq = g:Filter(s.remcheck, nil, maxseq)
-	end
-	local sg = g:Filter(s.remcheck, nil, seq)
-	local og = Duel.GetDecktopGroup(p, math.min(d, sg:GetCount()))
-	--]]
 	if g:GetCount() > 0 then
 		Duel.DisableShuffleCheck()
 		local ct = Duel.Remove(g, POS_FACEDOWN, REASON_EFFECT)

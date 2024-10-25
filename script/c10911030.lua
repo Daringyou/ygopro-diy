@@ -134,13 +134,14 @@ function s.PrivateEffect(c, reg)
 	e1:SetRange(LOCATION_MZONE)
 	e1:SetCountLimit(1, EFFECT_COUNT_CODE_SINGLE)
 	e1:SetCondition(s.thcon1)
+	e1:SetCost(s.thcost)
 	e1:SetTarget(s.thtg)
 	e1:SetOperation(s.thop)
 	c:RegisterEffect(e1)
 	local e2 = e1:Clone()
 	e2:SetType(EFFECT_TYPE_QUICK_O)
 	e2:SetCode(EVENT_FREE_CHAIN)
-	e2:SetHintTiming(TIMING_SPSUMMON)
+	e2:SetHintTiming(0, TIMINGS_CHECK_MONSTER)
 	e2:SetCondition(s.thcon2)
 	c:RegisterEffect(e2)
 	--代替破坏
@@ -177,51 +178,22 @@ function s.thfilter(c)
 	return c:IsType(TYPE_MONSTER) and c:IsLevel(4) and c:IsAbleToHand()
 end
 
-function s.costfilter(c, tp, list)
-	local ct = list and list[c] or 0
-	return c:IsCanRemoveCounter(tp, 0x1091, ct + 1, REASON_COST)
+function s.thcost(e, tp, eg, ep, ev, re, r, rp, chk)
+	if chk == 0 then return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST) end
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
 end
 
 function s.thtg(e, tp, eg, ep, ev, re, r, rp, chk)
-	if chk == 0 then
-		return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
-			and Duel.IsExistingMatchingCard(s.thfilter, tp, LOCATION_DECK, 0, 1, nil)
-	end
-	local ct = 0
-	local min = 1
-	local max = 2
-	local list = {}
-	local g = Duel.GetMatchingGroup(s.thfilter, tp, LOCATION_DECK, 0, nil)
-	local gclass = math.min(g:GetClassCount(Card.GetCode), max)
-	local og = Group.CreateGroup()
-	while ct + 1 <= gclass and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
-		Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 2))
-		local sg = Duel.SelectMatchingCard(tp, s.costfilter, tp, LOCATION_ONFIELD, 0, min, 1, nil, tp, list)
-		if not sg or sg:GetCount() == 0 then break end
-		og:Merge(sg)
-		local sc = sg:GetFirst()
-		if not list[sc] then list[sc] = 0 end
-		list[sc] = list[sc] + 1
-		ct = ct + 1
-		if min ~= 0 then min = 0 end
-	end
-	for tc in aux.Next(og) do
-		tc:RemoveCounter(tp, 0x1091, list[tc], REASON_COST)
-	end
-	e:SetLabel(ct)
+	if chk == 0 then return Duel.IsExistingMatchingCard(s.thfilter, tp, LOCATION_DECK, 0, 1, nil) end
 	Duel.SetOperationInfo(0, CATEGORY_TOHAND, nil, ct, tp, LOCATION_DECK)
 end
 
 function s.thop(e, tp, eg, ep, ev, re, r, rp)
-	local ct = e:GetLabel()
-	local g = Duel.GetMatchingGroup(s.thfilter, tp, LOCATION_DECK, 0, nil)
 	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_ATOHAND)
-	aux.GCheckAdditional = aux.dncheck
-	local sg = g:SelectSubGroup(tp, aux.TRUE, false, ct, ct)
-	aux.GCheckAdditional = nil
-	if sg:GetCount() > 0 then
-		Duel.SendtoHand(sg, nil, REASON_EFFECT)
-		Duel.ConfirmCards(1 - tp, sg)
+	local g = Duel.SelectMatchingCard(tp, s.thfilter, tp, LOCATION_DECK, 0, 1, 1, nil)
+	if g:GetCount() > 0 then
+		Duel.SendtoHand(g, nil, REASON_EFFECT)
+		Duel.ConfirmCards(1 - tp, g)
 	end
 end
 

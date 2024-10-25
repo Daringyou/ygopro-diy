@@ -134,6 +134,7 @@ function s.PrivateEffect(c)
 	e1:SetRange(LOCATION_MZONE)
 	e1:SetCountLimit(1, EFFECT_COUNT_CODE_SINGLE)
 	e1:SetCondition(s.tdcon1)
+	e1:SetCost(s.tdcost)
 	e1:SetTarget(s.tdtg)
 	e1:SetOperation(s.tdop)
 	c:RegisterEffect(e1)
@@ -162,60 +163,31 @@ function s.tdcon2(e, tp, eg, ep, ev, re, r, rp)
 	return not s.ActivateCheck()
 end
 
-function s.costfilter(c, tp, list)
-	local ct = list and list[c] or 0
-	return c:IsCanRemoveCounter(tp, 0x1091, ct + 1, REASON_COST)
+function s.tdcost(e, tp, eg, ep, ev, re, r, rp, chk)
+	if chk == 0 then return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST) end
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
 end
---
+
 function s.tdtg(e, tp, eg, ep, ev, re, r, rp, chk)
-	if chk == 0 then return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 4, REASON_COST) end
-	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
-	Duel.Draw(tp,1,REASON_COST)
-	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
-	Duel.Draw(tp,1,REASON_COST)
-	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
-	Duel.Draw(tp,1,REASON_COST)
-	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
-	Duel.Draw(tp,1,REASON_COST)
+	if chk == 0 then return Duel.IsExistingMatchingCard(Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, 1, nil) end
+	Duel.SetOperationInfo(0, CATEGORY_REMOVE, nil, 1, 1 - tp, LOCATION_ONFIELD)
 end
---]]
---[[
-function s.tdtg(e, tp, eg, ep, ev, re, r, rp, chk)
-	if chk == 0 then
-		return Duel.IsExistingMatchingCard(Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, 1, nil)
-			and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
-	end
-	local ct = 0
-	local min = 1
-	local list = {}
-	local og = Group.CreateGroup()
-	local gct = Duel.GetMatchingGroupCount(Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, nil)
-	local max = math.min(gct, 2)
-	while ct + 1 <= max and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
-		Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 1))
-		local sg = Duel.SelectMatchingCard(tp, s.costfilter, tp, LOCATION_ONFIELD, 0, min, 1, nil, tp, list)
-		if not sg or sg:GetCount() == 0 then break end
-		og:Merge(sg)
-		local sc = sg:GetFirst()
-		if not list[sc] then list[sc] = 0 end
-		list[sc] = list[sc] + 1
-		ct = ct + 1
-		if min ~= 0 then min = 0 end
-	end
-	for tc in aux.Next(og) do
-		tc:RemoveCounter(tp, 0x1091, list[tc], REASON_COST)
-	end
-	e:SetLabel(ct)
-	Duel.SetOperationInfo(0, CATEGORY_REMOVE, nil, ct, 1 - tp, LOCATION_ONFIELD)
-end
---]]
+
 function s.tdop(e, tp, eg, ep, ev, re, r, rp)
-	local ct = e:GetLabel()
-	if ct == 0 then return end
 	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_REMOVE)
-	local g = Duel.SelectMatchingCard(tp, Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, ct, ct, nil)
+	local g = Duel.SelectMatchingCard(tp, Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, 1, 1, nil)
 	if g:GetCount() > 0 then
 		Duel.HintSelection(g)
 		Duel.Remove(g, POS_FACEUP, REASON_EFFECT)
+		local tc = g:GetFirst()
+		if tc and tc:IsLocation(LOCATION_REMOVED) then
+			local rtype = bit.band(tc:GetType(), 0x7)
+			Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_ATOHAND)
+			local sg = Duel.SelectMatchingCard(tp, Card.IsType, tp, LOCATION_DECK, 0, 1, 1, nil, rtype)
+			if sg:GetCount() > 0 then
+				Duel.SendtoHand(sg, nil, REASON_EFFECT)
+				Duel.ConfirmCards(1 - tp, sg)
+			end
+		end
 	end
 end

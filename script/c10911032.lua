@@ -135,6 +135,7 @@ function s.PrivateEffect(c)
 	e1:SetCode(EVENT_CHAINING)
 	e1:SetRange(LOCATION_MZONE)
 	e1:SetCondition(s.imcon)
+	e1:SetCost(s.imcost)
 	e1:SetTarget(s.imtg)
 	e1:SetOperation(s.imop)
 	c:RegisterEffect(e1)
@@ -144,51 +145,23 @@ function s.imcon(e, tp, eg, ep, ev, re, r, rp)
 	return rp ~= tp
 end
 
-function s.gcheck(tp)
-	return function(g)
-		return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, #g, REASON_COST)
-	end
-end
-
-function s.costfilter(c, tp, list)
-	local ct = list and list[c] or 0
-	return c:IsCanRemoveCounter(tp, 0x1091, ct + 1, REASON_COST)
+function s.imcost(e, tp, eg, ep, ev, re, r, rp, chk)
+	if chk == 0 then return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST) end
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
 end
 
 function s.imtg(e, tp, eg, ep, ev, re, r, rp, chk, chkc)
-	if chkc then return chkc:IsOnField() and chkc:IsControler(tp) end
-	if chk == 0 then
-		return Duel.IsExistingTarget(aux.TRUE, tp, LOCATION_ONFIELD, 0, 1, nil)
-			and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
-	end
-	local ct = 0
-	local min = 1
-	local list = {}
-	local og = Group.CreateGroup()
-	local max = Duel.GetTargetCount(aux.TRUE, tp, LOCATION_ONFIELD, 0, nil)
-	while ct + 1 <= max and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
-		Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 1))
-		local sg = Duel.SelectMatchingCard(tp, s.costfilter, tp, LOCATION_ONFIELD, 0, min, 1, nil, tp, list)
-		if not sg or sg:GetCount() == 0 then break end
-		og:Merge(sg)
-		local sc = sg:GetFirst()
-		if not list[sc] then list[sc] = 0 end
-		list[sc] = list[sc] + 1
-		ct = ct + 1
-		if min ~= 0 then min = 0 end
-	end
-	for tc in aux.Next(og) do
-		tc:RemoveCounter(tp, 0x1091, list[tc], REASON_COST)
-	end
-	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_TARGET)
-	Duel.SelectTarget(tp, aux.TRUE, tp, LOCATION_ONFIELD, 0, ct, ct, nil)
+	if chkc then return chkc:IsOnField() and chkc:IsControler(tp) and chkc:IsFaceup() end
+	if chk == 0 then return Duel.IsExistingTarget(Card.IsFaceup, tp, LOCATION_ONFIELD, 0, 1, nil) end
+	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_FACEUP)
+	Duel.SelectTarget(tp, Card.IsFaceup, tp, LOCATION_ONFIELD, 0, 1, 1, nil)
 	e:SetLabel(re:GetHandler():GetOriginalCode())
 end
 
 function s.imop(e, tp, eg, ep, ev, re, r, rp)
 	local c = e:GetHandler()
-	local g = Duel.GetTargetsRelateToChain():Filter(Card.IsRelateToEffect, nil, e)
-	for tc in aux.Next(g) do
+	local tc = Duel.GetFirstTarget()
+	if tc:IsRelateToEffect(e) and tc:IsControler(tp) and tc:IsFaceup() then
 		local e1 = Effect.CreateEffect(c)
 		e1:SetType(EFFECT_TYPE_SINGLE)
 		e1:SetCode(EFFECT_IMMUNE_EFFECT)

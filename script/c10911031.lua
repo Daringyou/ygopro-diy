@@ -134,6 +134,7 @@ function s.PrivateEffect(c)
 	e1:SetType(EFFECT_TYPE_QUICK_O)
 	e1:SetCode(EVENT_SPSUMMON)
 	e1:SetRange(LOCATION_MZONE)
+	e1:SetCountLimit(1)
 	e1:SetCondition(s.discon)
 	e1:SetCost(s.ctcost)
 	e1:SetTarget(s.distg)
@@ -147,6 +148,7 @@ function s.PrivateEffect(c)
 	e2:SetType(EFFECT_TYPE_QUICK_O)
 	e2:SetCode(EVENT_CHAINING)
 	e2:SetRange(LOCATION_MZONE)
+	e2:SetCountLimit(1)
 	e2:SetCondition(s.negcon)
 	e2:SetCost(s.ctcost)
 	e2:SetTarget(s.negtg)
@@ -177,6 +179,7 @@ function s.disop(e, tp, eg, ep, ev, re, r, rp)
 	local ct = Duel.Remove(eg, POS_FACEUP, REASON_EFFECT)
 	local c = e:GetHandler()
 	if ct > 0 and c:IsRelateToEffect(e) then
+		Duel.BreakEffect()
 		c:AddCounter(0x1091, ct)
 	end
 end
@@ -199,6 +202,7 @@ function s.negop(e, tp, eg, ep, ev, re, r, rp)
 	local rc = re:GetHandler()
 	if Duel.NegateEffect(ev) and rc:IsRelateToEffect(re) and Duel.Remove(eg, POS_FACEUP, REASON_EFFECT) > 0
 		and c:IsRelateToEffect(e) then
+		Duel.BreakEffect()
 		c:AddCounter(0x1091, 1)
 	end
 end

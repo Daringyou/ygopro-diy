@@ -200,25 +200,37 @@ function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 		e1:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
 		e1:SetCode(EVENT_CHAIN_SOLVING)
 		e1:SetCondition(s.drcon)
-		--e1:SetTarget(s.drtg)
 		e1:SetOperation(s.drop)
 		Duel.RegisterEffect(e1, tp)
-		--[[
-		local e1 = Effect.CreateEffect(c)
-		e1:SetDescription(aux.Stringid(id, 1))
-		e1:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
-		e1:SetCode(EVENT_BECOME_TARGET)
-		e1:SetCondition(s.drcon)
-		e1:SetTarget(s.drtg)
-		e1:SetOperation(s.drop)
-		Duel.RegisterEffect(e1, tp)
-		--]]
 	end
 	if ft >= 2 then
-
+		--效果无效
+		local e2 = Effect.CreateEffect(c)
+		e2:SetDescription(aux.Stringid(id, 2))
+		e2:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+		e2:SetCode(EVENT_CHAINING)
+		e2:SetOperation(s.negop)
+		Duel.RegisterEffect(e2, tp)
+		--
+		local e3 = Effect.CreateEffect(c)
+		e3:SetType(EFFECT_TYPE_FIELD)
+		e3:SetCode(EFFECT_DISABLE)
+		e3:SetTargetRange(0,
+			LOCATION_ONFIELD + LOCATION_GRAVE + LOCATION_REMOVED + LOCATION_DECK + LOCATION_HAND + LOCATION_EXTRA)
+		e3:SetTarget(s.negtg)
+		Duel.RegisterEffect(e3, tp)
+		local e4 = e3:Clone()
+		e4:SetCode(EFFECT_DISABLE_EFFECT)
+		Duel.RegisterEffect(e4, tp)
 	end
 	if ft == 3 then
-
+		--
+		local e5 = Effect.CreateEffect(c)
+		e5:SetType(EFFECT_TYPE_FIELD)
+		e5:SetCode(EFFECT_IMMUNE_EFFECT)
+		e5:SetTargetRange(LOCATION_ONFIELD, 0)
+		e5:SetValue(s.imval)
+		Duel.RegisterEffect(e5, tp)
 	end
 end
 
@@ -242,39 +254,34 @@ function s.drcon(e, tp, eg, ep, ev, re, r, rp)
 		and tg and tg:IsExists(s.drfilter, 1, nil, tp)
 end
 
-function s.drtg(e, tp, eg, ep, ev, re, r, rp, chk)
-	if chk == 0 then return Duel.GetFlagEffect(tp, id) == 0 end
-	Duel.RegisterFlagEffect(tp, id, RESET_CHAIN, 0, 1)
-end
-
 function s.drop(e, tp, eg, ep, ev, re, r, rp)
-	--Duel.ResetFlagEffect(tp, id)
 	local tg = Duel.GetChainInfo(ev, CHAININFO_TARGET_CARDS)
 	local ct = tg:FilterCount(s.drfilter, nil, tp)
 	Duel.Hint(HINT_CARD, 0, id)
 	Duel.Draw(tp, ct, REASON_EFFECT)
 end
 
---[[
-function s.drfilter(c, tp)
-	return c:IsControler(tp) and c:IsOnField()
-		and (c:IsFaceup() or c:IsPublic())
+function s.negop(e, tp, eg, ep, ev, re, r, rp)
+	if not re:IsHasProperty(EFFECT_FLAG_CARD_TARGET) then return false end
+	local g = Duel.GetChainInfo(ev, CHAININFO_TARGET_CARDS)
+	if rp == tp or not g then return end
+	if g:IsExists(s.negfilter, 1, nil, tp) then
+		Duel.NegateEffect(ev)
+	end
 end
 
-function s.drcon(e, tp, eg, ep, ev, re, r, rp)
-	if not Duel.IsPlayerCanDraw(tp, 1) then return false end
-	return re and rp == 1 - tp and eg:IsExists(s.drfilter, 1, nil, tp)
+function s.negfilter(c, tp)
+	return c:IsControler(tp) and not c:IsOnField()
 end
 
-function s.drtg(e, tp, eg, ep, ev, re, r, rp, chk)
-	if chk == 0 then return Duel.GetFlagEffect(tp, id) == 0 end
-	Duel.RegisterFlagEffect(tp, id, RESET_CHAIN, 0, 1)
+function s.negtg(e, c)
+	return c:GetCardTarget():IsExists(s.drfilter, 1, nil, e:GetHandlerPlayer())
 end
 
-function s.drop(e, tp, eg, ep, ev, re, r, rp)
-	Duel.ResetFlagEffect(tp, id)
-	local ct = eg:FilterCount(s.drfilter, nil, tp)
-	Duel.Hint(HINT_CARD, 0, id)
-	Duel.Draw(tp, ct, REASON_EFFECT)
+function s.imval(e, te)
+	if te:GetOwnerPlayer() == e:GetHandlerPlayer() then return false end
+	local tc = te:GetHandler()
+	local g = Duel.GetChainInfo(0, CHAININFO_TARGET_CARDS)
+	return te:IsHasProperty(EFFECT_FLAG_CARD_TARGET) and g or g:IsExists(s.drfilter, 1, nil, e:GetHandlerPlayer())
+		or tc:GetCardTarget():IsExists(s.drfilter, 1, nil, e:GetHandlerPlayer())
 end
---]]

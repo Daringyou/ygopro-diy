@@ -62,6 +62,14 @@ function s.PublicEffect(c)
 			return res
 		end
 	end
+	if not aux.SkyCodeCheck2 then
+		aux.SkyCodeCheck2 = true
+		SkyCode_Effect_SetTargetRange = Effect.SetTargetRange
+		function Effect.SetTargetRange(te, loc_s, loc_o)
+			SkyCode_Effect_SetTargetRange(te, loc_s, loc_o)
+			return loc_s, loc_o
+		end
+	end
 end
 
 function s.mfilter1(c)
@@ -188,4 +196,7 @@ function s.tdop(e, tp, eg, ep, ev, re, r, rp)
 	Duel.BreakEffect()
 	Duel.SendtoHand(sg, nil, REASON_EFFECT)
 	Duel.ConfirmCards(1 - tp, sg)
+	for i, te in pairs{ Duel.IsPlayerAffectedByEffect(tp, EFFECT_CANNOT_SPECIAL_SUMMON) } do
+		te:SetAbsoluteRange(tp, 0, 1)
+	end
 end

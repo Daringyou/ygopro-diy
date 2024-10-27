@@ -183,8 +183,8 @@ end
 
 function s.fcheck(c, e)
 	return function(tp, sg, fc)
-		return not sg:IsContains(c) or not c:IsRelateToEffect(e) or
-			sg:FilterCount(Card.IsControler, nil, 1 - tp) <= c:GetCounter(0x1091)
+		return not sg:IsContains(c) or not c:IsRelateToEffect(e)
+			or sg:FilterCount(Card.IsControler, nil, 1 - tp) <= c:GetCounter(0x1091)
 	end
 end
 

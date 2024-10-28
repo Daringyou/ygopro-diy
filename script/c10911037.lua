@@ -1,6 +1,6 @@
---天印·天皇
+--天印·汁光计
 local s, id, o = GetID()
-s.name = "天印·天皇"
+s.name = "天印·汁光计"
 function s.initial_effect(c)
 	s.PublicEffect(c)
 	s.PrivateEffect(c)
@@ -60,14 +60,6 @@ function s.PublicEffect(c)
 			local res = SkyCode_Card_RemoveCounter(c, tp, ctype, ct, reason)
 			s.CalculateOperation(tp, ctype, ct)
 			return res
-		end
-	end
-	if not aux.SkyCodeCheck2 then
-		aux.SkyCodeCheck2 = true
-		SkyCode_Effect_SetTargetRange = Effect.SetTargetRange
-		function Effect.SetTargetRange(te, loc_s, loc_o)
-			SkyCode_Effect_SetTargetRange(te, loc_s, loc_o)
-			return loc_s, loc_o
 		end
 	end
 end
@@ -138,20 +130,32 @@ function s.PrivateEffect(c)
 	local e1 = Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id, 0))
 	e1:SetCategory(CATEGORY_REMOVE)
+	e1:SetProperty(EFFECT_FLAG_CARD_TARGET)
 	e1:SetType(EFFECT_TYPE_IGNITION)
 	e1:SetRange(LOCATION_MZONE)
 	e1:SetCountLimit(1, EFFECT_COUNT_CODE_SINGLE)
-	e1:SetCondition(s.tdcon1)
-	e1:SetCost(s.tdcost)
-	e1:SetTarget(s.tdtg)
-	e1:SetOperation(s.tdop)
+	e1:SetCost(s.remcost)
+	e1:SetCondition(s.remcon1)
+	e1:SetTarget(s.remtg)
+	e1:SetOperation(s.remop)
 	c:RegisterEffect(e1)
 	local e2 = e1:Clone()
+	e2:SetProperty(EFFECT_FLAG_CARD_TARGET)
 	e2:SetType(EFFECT_TYPE_QUICK_O)
 	e2:SetCode(EVENT_FREE_CHAIN)
-	e2:SetHintTiming(TIMINGS_CHECK_MONSTER + TIMING_END_PHASE)
-	e2:SetCondition(s.tdcon2)
+	e2:SetHintTiming(TIMINGS_CHECK_MONSTER + TIMING_MAIN_END)
+	e2:SetCondition(s.remcon2)
 	c:RegisterEffect(e2)
+	--
+	local e3 = Effect.CreateEffect(c)
+	e3:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+	e3:SetType(EFFECT_TYPE_FIELD)
+	e3:SetCode(EFFECT_CANNOT_ACTIVATE)
+	e3:SetRange(LOCATION_MZONE)
+	e3:SetTargetRange(0, 1)
+	e3:SetCondition(s.ltcon)
+	e3:SetValue(s.ltval)
+	c:RegisterEffect(e3)
 	Duel.AddCustomActivityCounter(id, ACTIVITY_CHAIN, s.ChainCheck)
 end
 
@@ -164,42 +168,79 @@ function s.ActivateCheck()
 	return Duel.GetCustomActivityCount(id, 0, ACTIVITY_CHAIN) + Duel.GetCustomActivityCount(id, 1, ACTIVITY_CHAIN) == 0
 end
 
-function s.tdcon1(e, tp, eg, ep, ev, re, r, rp)
+function s.ltcon(e)
+	local c = e:GetHandler()
+	return c:GetCounter(0x1091) > 0 and Duel.GetTurnPlayer() == e:GetHandlerPlayer()
+end
+
+function s.ltval(e, re, tp)
+	return re:IsActiveType(TYPE_SPELL + TYPE_TRAP)
+end
+
+function s.remcon1(e, tp, eg, ep, ev, re, r, rp)
 	return s.ActivateCheck()
 end
 
-function s.tdcon2(e, tp, eg, ep, ev, re, r, rp)
+function s.remcon2(e, tp, eg, ep, ev, re, r, rp)
 	return not s.ActivateCheck()
 end
 
-function s.tdcost(e, tp, eg, ep, ev, re, r, rp, chk)
+function s.remcost(e, tp, eg, ep, ev, re, r, rp, chk)
 	if chk == 0 then return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST) end
 	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
 end
 
-function s.tdtg(e, tp, eg, ep, ev, re, r, rp, chk)
-	if chk == 0 then return Duel.IsExistingMatchingCard(Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, 1, nil) end
-	Duel.SetOperationInfo(0, CATEGORY_REMOVE, nil, 1, 1 - tp, LOCATION_ONFIELD)
+function s.remtg(e, tp, eg, ep, ev, re, r, rp, chk, chkc)
+	if chkc then
+		return chkc:IsControler(1 - tp) and chkc:IsAbleToRemove()
+			and chkc:IsLocation(LOCATION_ONFIELD + LOCATION_GRAVE)
+	end
+	if chk == 0 then return Duel.IsExistingTarget(Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD + LOCATION_GRAVE, 1, nil) end
+	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_REMOVE)
+	local g = Duel.SelectTarget(tp, Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD + LOCATION_GRAVE, 1, 1, nil)
+	Duel.SetOperationInfo(0, CATEGORY_REMOVE, g, 1, 0, 0)
+	Duel.SetChainLimit(s.limit(g:GetFirst():GetOriginalCode()))
 end
 
-function s.tdop(e, tp, eg, ep, ev, re, r, rp)
-	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_REMOVE)
-	local g = Duel.SelectMatchingCard(tp, Card.IsAbleToRemove, tp, 0, LOCATION_ONFIELD, 1, 1, nil)
-	if g:GetCount() == 0 then return end
-	Duel.HintSelection(g)
-	Duel.Remove(g, POS_FACEUP, REASON_EFFECT)
-	local tc = g:GetFirst()
-	if not tc:IsLocation(LOCATION_REMOVED) then return end
-	local rtype = bit.band(tc:GetType(), 0x7)
-	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_ATOHAND)
-	local sg = Duel.SelectMatchingCard(tp, Card.IsType, tp, LOCATION_GRAVE, 0, 1, 1, nil, rtype)
-	if sg:GetCount() == 0 then return end
-	Duel.BreakEffect()
-	Duel.SendtoHand(sg, nil, REASON_EFFECT)
-	Duel.ConfirmCards(1 - tp, sg)
-	--[[
-	for _, te in pairs{ Duel.IsPlayerAffectedByEffect(tp, EFFECT_CANNOT_SPECIAL_SUMMON) } do
-		te:SetAbsoluteRange(tp, 0, 1)
+function s.limit(code)
+	return function(e, rp, tp)
+		return not e:GetHandler():IsOriginalCodeRule(code)
 	end
-	--]]
+end
+
+function s.remop(e, tp, eg, ep, ev, re, r, rp)
+	local tc = Duel.GetFirstTarget()
+	if tc:IsRelateToEffect(e) and Duel.Remove(tc, POS_FACEDOWN, REASON_EFFECT) ~= 0 and tc:IsLocation(LOCATION_REMOVED) then
+		local c = e:GetHandler()
+		local e1 = Effect.CreateEffect(c)
+		e1:SetType(EFFECT_TYPE_FIELD)
+		e1:SetCode(EFFECT_DISABLE)
+		e1:SetTargetRange(0, LOCATION_ONFIELD)
+		e1:SetTarget(s.distg)
+		e1:SetLabelObject(tc)
+		e1:SetReset(RESET_PHASE + PHASE_END)
+		Duel.RegisterEffect(e1, tp)
+		local e2 = Effect.CreateEffect(c)
+		e2:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+		e2:SetCode(EVENT_CHAIN_SOLVING)
+		e2:SetCondition(s.discon)
+		e2:SetOperation(s.disop)
+		e2:SetLabelObject(tc)
+		e2:SetReset(RESET_PHASE + PHASE_END)
+		Duel.RegisterEffect(e2, tp)
+	end
+end
+
+function s.distg(e, c)
+	local tc = e:GetLabelObject()
+	return c:IsOriginalCodeRule(tc:GetOriginalCodeRule())
+end
+
+function s.discon(e, tp, eg, ep, ev, re, r, rp)
+	local tc = e:GetLabelObject()
+	return rp == 1 - tp and re:GetHandler():IsOriginalCodeRule(tc:GetOriginalCodeRule())
+end
+
+function s.disop(e, tp, eg, ep, ev, re, r, rp)
+	Duel.NegateEffect(ev)
 end

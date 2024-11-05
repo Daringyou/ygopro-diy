@@ -183,10 +183,10 @@ end
 
 function s.filter(c, e, tp)
 	if not (c:IsLevel(4) and c:IsType(TYPE_FUSION) and not c:IsCode(id)
-			and c:IsCanBeSpecialSummoned(e, SUMMON_TYPE_FUSION, tp, false, false)) then
+			and c:IsCanBeSpecialSummoned(e, SUMMON_TYPE_FUSION, tp, true, true)) then
 		return false
 	end
-	return c:IsLocation(LOCATION_EXTRA) and Duel.GetLocationCountFromEx(tp, tp, nil, c) > 0 or
+	return (c:IsLocation(LOCATION_EXTRA) and Duel.GetLocationCountFromEx(tp, tp, nil, c) > 0) or
 		Duel.GetLocationCount(tp, LOCATION_MZONE) > 0
 end
 
@@ -198,10 +198,12 @@ function s.sptg(e, tp, eg, ep, ev, re, r, rp, chk)
 	Duel.SetOperationInfo(0, CATEGORY_SPECIAL_SUMMON, nil, 1, tp, LOCATION_EXTRA + LOCATION_GRAVE)
 end
 
+--额外怪兽可用格子
 function s.exfilter1(c)
 	return c:IsLocation(LOCATION_EXTRA) and c:IsFacedown() and c:IsType(TYPE_FUSION)
 end
 
+--灵摆怪兽可用格子
 function s.exfilter2(c)
 	return c:IsLocation(LOCATION_EXTRA) and c:IsFaceup() and c:IsType(TYPE_FUSION)
 end
@@ -220,10 +222,10 @@ end
 function s.spop(e, tp, eg, ep, ev, re, r, rp)
 	local c = e:GetHandler()
 	if not c:IsRelateToEffect(e) or not Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_EFFECT) then return end
-	local ft1 = Duel.GetLocationCount(tp, LOCATION_MZONE)--主要怪兽可用格子
-	local ft2 = Duel.GetLocationCountFromEx(tp, tp, nil, TYPE_FUSION)--额外怪兽可用格子
-	local ft3 = Duel.GetLocationCountFromEx(tp, tp, nil, TYPE_PENDULUM)--灵摆怪兽可用格子
-	local ft = Duel.GetUsableMZoneCount(tp)--场上全部可用怪兽格子
+	local ft1 = Duel.GetLocationCount(tp, LOCATION_MZONE)            --主要怪兽可用格子
+	local ft2 = Duel.GetLocationCountFromEx(tp, tp, nil, TYPE_FUSION) --额外怪兽可用格子
+	local ft3 = Duel.GetLocationCountFromEx(tp, tp, nil, TYPE_PENDULUM) --灵摆怪兽可用格子
+	local ft = Duel.GetUsableMZoneCount(tp)                          --场上全部可用怪兽格子
 	if Duel.IsPlayerAffectedByEffect(tp, 59822133) then
 		if ft1 > 0 then ft1 = 1 end
 		if ft2 > 0 then ft2 = 1 end
@@ -241,10 +243,10 @@ function s.spop(e, tp, eg, ep, ev, re, r, rp)
 	aux.GCheckAdditional = s.gcheck(tp, ft1, ft2, ft3, ect)
 	local rg = sg:SelectSubGroup(tp, aux.TRUE, false, 1, ft)
 	aux.GCheckAdditional = nil
-	local fid = c:GetFieldID()
 	local og = Group.CreateGroup()
 	for tc in aux.Next(rg) do
 		local zone = 0xff
+		--[[
 		if ft2 == ft1 + 1 then
 			if tc:IsLocation(LOCATION_EXTRA) then
 				zone = 0x60
@@ -254,6 +256,7 @@ function s.spop(e, tp, eg, ep, ev, re, r, rp)
 				ft1 = ft1 - 1
 			end
 		end
+		--]]
 		if Duel.SpecialSummonStep(tc, SUMMON_TYPE_FUSION, tp, tp, false, false, POS_FACEUP, zone) then
 			og:AddCard(tc)
 			tc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, 0, 2)

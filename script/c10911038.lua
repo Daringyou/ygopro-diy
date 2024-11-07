@@ -181,6 +181,81 @@ function s.spcon2(e, tp, eg, ep, ev, re, r, rp)
 	return not s.ActivateCheck()
 end
 
+function s.spfilter(c, e, tp)
+	if not (c:IsLevel(4) and c:IsType(TYPE_FUSION) and not c:IsCode(id)
+			and c:IsCanBeSpecialSummoned(e, SUMMON_TYPE_FUSION, tp, false, true)) then
+		return false
+	end
+	return c:IsLocation(LOCATION_EXTRA) and Duel.GetLocationCountFromEx(tp, tp, nil, c) > 0
+		or Duel.GetLocationCount(tp, LOCATION_MZONE) > 0
+end
+
+function s.sptg(e, tp, eg, ep, ev, re, r, rp, chk)
+	if chk == 0 then
+		return Duel.IsExistingMatchingCard(s.spfilter, tp, LOCATION_EXTRA + LOCATION_GRAVE, 0, 1, nil, e, tp)
+			and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_EFFECT)
+	end
+	Duel.SetOperationInfo(0, CATEGORY_SPECIAL_SUMMON, nil, 1, tp, LOCATION_EXTRA + LOCATION_GRAVE)
+end
+
+function s.exfilter1(c)
+	return c:IsLocation(LOCATION_EXTRA) and c:IsFacedown()
+end
+
+function s.exfilter2(c)
+	return c:IsLocation(LOCATION_EXTRA) and c:IsFaceup() and c:IsType(TYPE_PENDULUM)
+end
+
+function s.gcheck(ft1, ft2, ft3, ect, ft, tp)
+	return function(g)
+		return aux.dncheck(g) and #g <= ft
+			and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, #g, REASON_EFFECT)
+			and g:FilterCount(Card.IsLocation, nil, LOCATION_GRAVE) <= ft1
+			and g:FilterCount(s.exfilter1, nil) <= ft2
+			and g:FilterCount(s.exfilter2, nil) <= ft3
+			and g:FilterCount(Card.IsLocation, nil, LOCATION_EXTRA) <= ect
+	end
+end
+
+function s.spop(e, tp, eg, ep, ev, re, r, rp)
+	local ft1 = Duel.GetLocationCount(tp, LOCATION_MZONE)
+	local ft2 = Duel.GetLocationCountFromEx(tp, tp, nil, TYPE_FUSION)
+	local ft3 = Duel.GetLocationCountFromEx(tp, tp, nil, TYPE_PENDULUM)
+	local ft = Duel.GetUsableMZoneCount(tp)
+	if Duel.IsPlayerAffectedByEffect(tp, 59822133) then
+		if ft1 > 1 then ft1 = 1 end
+		if ft2 > 1 then ft2 = 1 end
+		if ft3 > 1 then ft3 = 1 end
+		if ft > 1 then ft = 1 end
+	end
+	local ect = c29724053 and Duel.IsPlayerAffectedByEffect(tp, 29724053) and c29724053[tp] or ft
+	local loc = 0
+	if ft1 > 0 then loc = loc + LOCATION_GRAVE end
+	if ect > 0 and (ft2 > 0 or ft3 > 0) then loc = loc + LOCATION_EXTRA end
+	if loc == 0 then return end
+	local g = Duel.GetMatchingGroup(aux.NecroValleyFilter(s.spfilter), tp, loc, 0, nil, e, tp)
+	if g:GetCount() == 0 then return end
+	local rg = Group.CreateGroup()
+	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_SPSUMMON)
+	aux.GCheckAdditional = s.gcheck(ft1, ft2, ft3, ect, ft, tp)
+	local sg = g:SelectSubGroup(tp, aux.TRUE, false, 1, ft, ft1, ft2, ft3, ect, ft)
+	aux.GCheckAdditional = nil
+	for tc in aux.Next(sg) do
+		if Duel.SpecialSummonStep(tc, SUMMON_TYPE_FUSION, tp, tp, false, true, POS_FACEUP) then
+			tc:CompleteProcedure()
+			rg:AddCard(tc)
+			tc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, 0, 2)
+		end
+	end
+	Duel.SpecialSummonComplete()
+	Duel.BreakEffect()
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, #rg, REASON_EFFECT)
+	for tc in aux.Next(rg) do
+		tc:AddCounter(0x1091, 1)
+	end
+end
+
+--[[
 function s.filter(c, e, tp)
 	if not (c:IsLevel(4) and c:IsType(TYPE_FUSION) and not c:IsCode(id)
 			and c:IsCanBeSpecialSummoned(e, SUMMON_TYPE_FUSION, tp, true, true)) then
@@ -204,7 +279,7 @@ function s.exfilter1(c)
 end
 
 --灵摆怪兽可用格子
-function s.exfilter2(c)
+function s.exfilter1(c)
 	return c:IsLocation(LOCATION_EXTRA) and c:IsFaceup() and c:IsType(TYPE_FUSION)
 end
 
@@ -214,7 +289,7 @@ function s.gcheck(tp, ft1, ft2, ft3, ect)
 			and g:GetClassCount(Card.GetCode) == #g
 			and g:FilterCount(Card.IsLocation, nil, LOCATION_GRAVE) <= ft1
 			and g:FilterCount(s.exfilter1, nil) <= ft2
-			and g:FilterCount(s.exfilter2, nil) <= ft3
+			and g:FilterCount(s.exfilter1, nil) <= ft3
 			and g:FilterCount(Card.IsLocation, nil, LOCATION_EXTRA) <= ect
 	end
 end
@@ -246,7 +321,6 @@ function s.spop(e, tp, eg, ep, ev, re, r, rp)
 	local og = Group.CreateGroup()
 	for tc in aux.Next(rg) do
 		local zone = 0xff
-		--[[
 		if ft2 == ft1 + 1 then
 			if tc:IsLocation(LOCATION_EXTRA) then
 				zone = 0x60
@@ -256,7 +330,6 @@ function s.spop(e, tp, eg, ep, ev, re, r, rp)
 				ft1 = ft1 - 1
 			end
 		end
-		--]]
 		if Duel.SpecialSummonStep(tc, SUMMON_TYPE_FUSION, tp, tp, false, false, POS_FACEUP, zone) then
 			og:AddCard(tc)
 			tc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, 0, 2)
@@ -300,3 +373,4 @@ function s.retop(e, tp, eg, ep, ev, re, r, rp)
 	Duel.SendtoDeck(tg, nil, SEQ_DECKSHUFFLE, REASON_EFFECT)
 	g:DeleteGroup()
 end
+--]]

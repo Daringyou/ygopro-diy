@@ -218,9 +218,13 @@ function s.gcheck(ft1, ft2, ft3, ect, ft, tp)
 end
 
 function s.spop(e, tp, eg, ep, ev, re, r, rp)
+	--主要怪兽区域可用格子
 	local ft1 = Duel.GetLocationCount(tp, LOCATION_MZONE)
+	--融合怪兽出场可用格子
 	local ft2 = Duel.GetLocationCountFromEx(tp, tp, nil, TYPE_FUSION)
+	--灵摆怪兽出场可用格子
 	local ft3 = Duel.GetLocationCountFromEx(tp, tp, nil, TYPE_PENDULUM)
+	--总怪兽区域可用格子
 	local ft = Duel.GetUsableMZoneCount(tp)
 	if Duel.IsPlayerAffectedByEffect(tp, 59822133) then
 		if ft1 > 1 then ft1 = 1 end
@@ -241,7 +245,11 @@ function s.spop(e, tp, eg, ep, ev, re, r, rp)
 	local sg = g:SelectSubGroup(tp, aux.TRUE, false, 1, ft, ft1, ft2, ft3, ect, ft)
 	aux.GCheckAdditional = nil
 	for tc in aux.Next(sg) do
-		if Duel.SpecialSummonStep(tc, SUMMON_TYPE_FUSION, tp, tp, false, true, POS_FACEUP) then
+		local zone = 0xff
+		if tc:IsLocation(LOCATION_EXTRA) and sg:IsExists(Card.IsLocation, tc, 1, LOCATION_EXTRA) then
+			
+		end
+		if Duel.SpecialSummonStep(tc, SUMMON_TYPE_FUSION, tp, tp, false, true, POS_FACEUP, zone) then
 			tc:CompleteProcedure()
 			rg:AddCard(tc)
 			tc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, 0, 2)

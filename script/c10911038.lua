@@ -218,6 +218,8 @@ function s.gcheck(ft1, ft2, ft3, ect, ft, tp)
 end
 
 function s.spop(e, tp, eg, ep, ev, re, r, rp)
+	local c = e:GetHandler()
+	local fid = c:GetFieldID()
 	--主要怪兽区域可用格子
 	local ft1 = Duel.GetLocationCount(tp, LOCATION_MZONE)
 	--融合怪兽出场可用格子
@@ -244,15 +246,18 @@ function s.spop(e, tp, eg, ep, ev, re, r, rp)
 	aux.GCheckAdditional = s.gcheck(ft1, ft2, ft3, ect, ft, tp)
 	local sg = g:SelectSubGroup(tp, aux.TRUE, false, 1, ft, ft1, ft2, ft3, ect, ft)
 	aux.GCheckAdditional = nil
+	local sg2 = sg:Clone()
 	for tc in aux.Next(sg) do
 		local zone = 0xff
-		if tc:IsLocation(LOCATION_EXTRA) and sg:IsExists(Card.IsLocation, tc, 1, LOCATION_EXTRA) then
-			
+		if tc:IsLocation(LOCATION_EXTRA) and sg2:FilterCount(Card.IsLocation, nil, LOCATION_GRAVE) == ft1 then
+			zone = 0x60
 		end
+		sg2:RemoveCard(tc)
 		if Duel.SpecialSummonStep(tc, SUMMON_TYPE_FUSION, tp, tp, false, true, POS_FACEUP, zone) then
+			ft1 = Duel.GetLocationCount(tp, LOCATION_MZONE)
 			tc:CompleteProcedure()
 			rg:AddCard(tc)
-			tc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, 0, 2)
+			tc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD, 0, 1, fid)
 		end
 	end
 	Duel.SpecialSummonComplete()
@@ -261,124 +266,40 @@ function s.spop(e, tp, eg, ep, ev, re, r, rp)
 	for tc in aux.Next(rg) do
 		tc:AddCounter(0x1091, 1)
 	end
-end
-
---[[
-function s.filter(c, e, tp)
-	if not (c:IsLevel(4) and c:IsType(TYPE_FUSION) and not c:IsCode(id)
-			and c:IsCanBeSpecialSummoned(e, SUMMON_TYPE_FUSION, tp, true, true)) then
-		return false
-	end
-	return (c:IsLocation(LOCATION_EXTRA) and Duel.GetLocationCountFromEx(tp, tp, nil, c) > 0) or
-		Duel.GetLocationCount(tp, LOCATION_MZONE) > 0
-end
-
-function s.sptg(e, tp, eg, ep, ev, re, r, rp, chk)
-	if chk == 0 then
-		return Duel.IsExistingMatchingCard(s.filter, tp, LOCATION_EXTRA + LOCATION_GRAVE, 0, 1, nil, e, tp) and
-			Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_EFFECT)
-	end
-	Duel.SetOperationInfo(0, CATEGORY_SPECIAL_SUMMON, nil, 1, tp, LOCATION_EXTRA + LOCATION_GRAVE)
-end
-
---额外怪兽可用格子
-function s.exfilter1(c)
-	return c:IsLocation(LOCATION_EXTRA) and c:IsFacedown() and c:IsType(TYPE_FUSION)
-end
-
---灵摆怪兽可用格子
-function s.exfilter1(c)
-	return c:IsLocation(LOCATION_EXTRA) and c:IsFaceup() and c:IsType(TYPE_FUSION)
-end
-
-function s.gcheck(tp, ft1, ft2, ft3, ect)
-	return function(g)
-		return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, #g, REASON_EFFECT)
-			and g:GetClassCount(Card.GetCode) == #g
-			and g:FilterCount(Card.IsLocation, nil, LOCATION_GRAVE) <= ft1
-			and g:FilterCount(s.exfilter1, nil) <= ft2
-			and g:FilterCount(s.exfilter1, nil) <= ft3
-			and g:FilterCount(Card.IsLocation, nil, LOCATION_EXTRA) <= ect
-	end
-end
-
-function s.spop(e, tp, eg, ep, ev, re, r, rp)
-	local c = e:GetHandler()
-	if not c:IsRelateToEffect(e) or not Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_EFFECT) then return end
-	local ft1 = Duel.GetLocationCount(tp, LOCATION_MZONE)            --主要怪兽可用格子
-	local ft2 = Duel.GetLocationCountFromEx(tp, tp, nil, TYPE_FUSION) --额外怪兽可用格子
-	local ft3 = Duel.GetLocationCountFromEx(tp, tp, nil, TYPE_PENDULUM) --灵摆怪兽可用格子
-	local ft = Duel.GetUsableMZoneCount(tp)                          --场上全部可用怪兽格子
-	if Duel.IsPlayerAffectedByEffect(tp, 59822133) then
-		if ft1 > 0 then ft1 = 1 end
-		if ft2 > 0 then ft2 = 1 end
-		if ft3 > 0 then ft3 = 1 end
-		if ft > 0 then ft = 1 end
-	end
-	local ect = Duel.IsPlayerAffectedByEffect(tp, 29724053) and c29724053[tp] or ft
-	local loc = 0
-	if ft1 > 0 then loc = loc + LOCATION_GRAVE end
-	if ect > 0 and (ft2 > 0 or ft3 > 0) then loc = loc + LOCATION_EXTRA end
-	if loc == 0 then return end
-	local sg = Duel.GetMatchingGroup(s.filter, tp, loc, 0, nil, e, tp)
-	if sg:GetCount() == 0 then return end
-	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_SPSUMMON)
-	aux.GCheckAdditional = s.gcheck(tp, ft1, ft2, ft3, ect)
-	local rg = sg:SelectSubGroup(tp, aux.TRUE, false, 1, ft)
-	aux.GCheckAdditional = nil
-	local og = Group.CreateGroup()
-	for tc in aux.Next(rg) do
-		local zone = 0xff
-		if ft2 == ft1 + 1 then
-			if tc:IsLocation(LOCATION_EXTRA) then
-				zone = 0x60
-				ft2 = ft2 - 1
-			else
-				zone = 0xff - 0x60
-				ft1 = ft1 - 1
-			end
-		end
-		if Duel.SpecialSummonStep(tc, SUMMON_TYPE_FUSION, tp, tp, false, false, POS_FACEUP, zone) then
-			og:AddCard(tc)
-			tc:RegisterFlagEffect(id, RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, 0, 2)
-		end
-	end
-	Duel.SpecialSummonComplete()
-	for tc in aux.Next(og) do
-		tc:CompleteProcedure()
-	end
-	Duel.BreakEffect()
-	Duel.RemoveCounter(tp, 1, 0, 0x1091, #og, REASON_EFFECT)
-	for tc in aux.Next(og) do
-		tc:AddCounter(0x1091, 1)
-	end
-	og:KeepAlive()
+	rg:KeepAlive()
 	local e1 = Effect.CreateEffect(c)
 	e1:SetProperty(EFFECT_FLAG_IGNORE_IMMUNE)
 	e1:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
 	e1:SetCode(EVENT_PHASE + PHASE_END)
-	e1:SetCountLimit(1)
-	e1:SetLabel(Duel.GetTurnCount())
-	e1:SetLabelObject(og)
-	e1:SetCondition(s.retcon)
-	e1:SetOperation(s.retop)
-	e1:SetReset(RESET_PHASE + PHASE_END, 2)
+	e1:SetCondition(s.tdcon)
+	e1:SetOperation(s.tdop)
+	e1:SetLabel(fid, Duel.GetTurnCount())
+	e1:SetLabelObject(rg)
+	e1:SetReset(RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, 2)
 	Duel.RegisterEffect(e1, tp)
 end
 
-function s.retfilter(c)
-	return c:GetFlagEffect(id) > 0
+function s.tdfilter(c, fid)
+	local flag = c:GetFlagEffectLabel(id)
+	return flag and flag == fid
 end
 
-function s.retcon(e, tp, eg, ep, ev, re, r, rp)
+function s.tdcon(e, tp, eg, ep, ev, re, r, rp)
+	local fid, turnc = e:GetLabel()
+	if Duel.GetTurnCount() == turnc then return false end
 	local g = e:GetLabelObject()
-	return Duel.GetTurnCount() ~= e:GetLabel() and g:IsExists(s.retfilter, 1, nil)
+	if not g:IsExists(s.tdfilter, 1, nil, fid) then
+		g:DeleteGroup()
+		e:Reset()
+		return false
+	else
+		return true
+	end
 end
 
-function s.retop(e, tp, eg, ep, ev, re, r, rp)
+function s.tdop(e, tp, eg, ep, ev, re, r, rp)
+	local fid, turnc = e:GetLabel()
 	local g = e:GetLabelObject()
-	local tg = g:Filter(s.retfilter, nil)
-	Duel.SendtoDeck(tg, nil, SEQ_DECKSHUFFLE, REASON_EFFECT)
-	g:DeleteGroup()
+	local tg = g:Filter(s.tdfilter, nil, fid)
+	Duel.SendtoDeck(tg, nil, 2, REASON_EFFECT)
 end
---]]

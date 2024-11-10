@@ -275,7 +275,7 @@ function s.spop(e, tp, eg, ep, ev, re, r, rp)
 	e1:SetOperation(s.tdop)
 	e1:SetLabel(fid, Duel.GetTurnCount())
 	e1:SetLabelObject(rg)
-	e1:SetReset(RESET_EVENT + RESETS_STANDARD + RESET_PHASE + PHASE_END, 2)
+	e1:SetReset(RESET_PHASE + PHASE_END, 2)
 	Duel.RegisterEffect(e1, tp)
 end
 

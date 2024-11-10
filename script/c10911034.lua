@@ -212,11 +212,11 @@ function s.remtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	local list = {}
 	local g = Duel.GetFieldGroup(tp, 0, LOCATION_DECK)
 	local gct = g:GetCount()
-	local tc = g:Filter(s.remfilter, nil, gct - ct - 1):GetFirst()
+	local tc = g:Filter(aux.FilterEqualFunction, nil, gct - ct - 1):GetFirst()
 	while tc and tc:IsAbleToRemove() and Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, ct + 1, REASON_COST) do
 		ct = ct + 1
 		list[ct] = ct
-		tc = g:Filter(s.remfilter, nil, gct - ct - 1):GetFirst()
+		tc = g:Filter(aux.FilterEqualFunction, nil, gct - ct - 1):GetFirst()
 	end
 	Duel.Hint(HINT_SELECTMSG, tp, aux.Stringid(id, 5))
 	local ac = Duel.AnnounceNumber(tp, table.unpack(list))

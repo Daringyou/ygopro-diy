@@ -141,56 +141,15 @@ function s.PrivateEffect(c)
 	--攻守上升
 	local e1 = Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id, 1))
-	e1:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CLIENT_HINT)
+	e1:SetProperty(EFFECT_FLAG_CLIENT_HINT)
 	e1:SetType(EFFECT_TYPE_FIELD)
 	e1:SetCode(EFFECT_UPDATE_ATTACK)
 	e1:SetRange(LOCATION_MZONE)
 	e1:SetTargetRange(LOCATION_MZONE, 0)
-	e1:SetTarget(s.eftg)
+	e1:SetTarget(s.efftg)
 	e1:SetValue(s.efilter1)
 	e1:SetLabel(1)
 	c:RegisterEffect(e1)
-	--卡组抽卡
-	local e2 = Effect.CreateEffect(c)
-	e2:SetDescription(aux.Stringid(id, 2))
-	e2:SetCategory(CATEGORY_DRAW)
-	e2:SetProperty(EFFECT_FLAG_CLIENT_HINT)
-	e2:SetType(EFFECT_TYPE_IGNITION)
-	e2:SetRange(LOCATION_MZONE)
-	e2:SetCountLimit(1)
-	e2:SetLabel(2)
-	e2:SetCost(s.drcost)
-	e2:SetTarget(s.drtg)
-	e2:SetOperation(s.drop)
-	local ge2 = ge1:Clone()
-	ge2:SetLabelObject(e2)
-	c:RegisterEffect(ge2)
-	--放置指示物
-	local e3 = Effect.CreateEffect(c)
-	e3:SetDescription(aux.Stringid(id, 3))
-	e3:SetProperty(EFFECT_FLAG_CLIENT_HINT)
-	e3:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
-	e3:SetCode(EVENT_CHAINING)
-	e3:SetRange(LOCATION_MZONE)
-	e3:SetCountLimit(1)
-	e3:SetLabel(3)
-	e3:SetCondition(s.ctcon)
-	e3:SetOperation(s.ctop)
-	local ge3 = ge1:Clone()
-	ge3:SetLabelObject(e3)
-	c:RegisterEffect(ge3)
-	--效果免疫
-	local e4 = Effect.CreateEffect(c)
-	e4:SetDescription(aux.Stringid(id, 4))
-	e4:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CLIENT_HINT)
-	e4:SetType(EFFECT_TYPE_SINGLE)
-	e4:SetCode(EFFECT_IMMUNE_EFFECT)
-	e4:SetRange(LOCATION_MZONE)
-	e4:SetValue(s.efilter2)
-	e4:SetLabel(4)
-	local ge4 = ge1:Clone()
-	ge4:SetLabelObject(e4)
-	c:RegisterEffect(ge4)
 end
 
 function s.remfilter(c, seq)
@@ -243,40 +202,10 @@ function s.addval(e, c)
 	return c:GetFlagEffect(aux.SkyCode) > 0
 end
 
-function s.eftg(e, c)
-	return aux.SkyCodePlayer[e:GetHandlerPlayer()] >= e:GetLabelObject():GetLabel() and c:GetFlagEffect(aux.SkyCode) > 0
+function s.efftg(e, c)
+	return aux.SkyCodePlayer[e:GetHandlerPlayer()] >= e:GetLabel() and c:GetFlagEffect(aux.SkyCode) > 0
 end
 
 function s.efilter1(e, c)
 	return aux.SkyCodePlayer[e:GetHandlerPlayer()] * 100
-end
-
-function s.drcost(e, tp, eg, ep, ev, re, r, rp, chk)
-	if chk == 0 then return e:GetHandler():IsCanRemoveCounter(tp, 0x1091, 1, REASON_COST) end
-	e:GetHandler():RemoveCounter(tp, 0x1091, 1, REASON_COST)
-end
-
-function s.drtg(e, tp, eg, ep, ev, re, r, rp, chk)
-	if chk == 0 then return Duel.IsPlayerCanDraw(tp, 1) end
-	Duel.SetTargetPlayer(tp)
-	Duel.SetTargetParam(1)
-	Duel.SetOperationInfo(0, CATEGORY_DRAW, nil, 0, tp, 1)
-end
-
-function s.drop(e, tp, eg, ep, ev, re, r, rp)
-	local p, d = Duel.GetChainInfo(0, CHAININFO_TARGET_PLAYER, CHAININFO_TARGET_PARAM)
-	Duel.Draw(p, d, REASON_EFFECT)
-end
-
-function s.efilter2(e, re)
-	return e:GetHandlerPlayer() ~= re:GetOwnerPlayer()
-end
-
-function s.ctcon(e, tp, eg, ep, ev, re, r, rp)
-	return ep == 1 - tp and not e:GetHandler():IsStatus(STATUS_BATTLE_DESTROYED)
-end
-
-function s.ctop(e, tp, eg, ep, ev, re, r, rp)
-	Duel.Hint(HINT_CARD, tp, e:GetHandler():GetOriginalCode())
-	e:GetHandler():AddCounter(0x1091, 1)
 end

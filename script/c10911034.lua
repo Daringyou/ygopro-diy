@@ -152,10 +152,6 @@ function s.PrivateEffect(c)
 	c:RegisterEffect(e1)
 end
 
-function s.remfilter(c, seq)
-	return c:GetSequence() == seq
-end
-
 function s.remtg(e, tp, eg, ep, ev, re, r, rp, chk)
 	if chk == 0 then
 		local g = Duel.GetDecktopGroup(1 - tp, 1)

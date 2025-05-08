@@ -126,15 +126,13 @@ function s.CalculateOperation(tp, ctype, ct)
 end
 
 function s.PrivateEffect(c)
-	--融合召唤
+	--效果复制
 	local e1 = Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id, 0))
-	e1:SetCategory(CATEGORY_SPECIAL_SUMMON + CATEGORY_FUSION_SUMMON)
 	e1:SetType(EFFECT_TYPE_IGNITION)
 	e1:SetRange(LOCATION_MZONE)
 	e1:SetCountLimit(1, EFFECT_COUNT_CODE_SINGLE)
 	e1:SetCondition(s.cpcon1)
-	e1:SetCost(s.cpcost)
 	e1:SetTarget(s.cptg)
 	e1:SetOperation(s.cpop)
 	c:RegisterEffect(e1)
@@ -144,14 +142,24 @@ function s.PrivateEffect(c)
 	e2:SetHintTiming(TIMING_SPSUMMON)
 	e2:SetCondition(s.cpcon2)
 	c:RegisterEffect(e2)
+	Duel.AddCustomActivityCounter(id, ACTIVITY_CHAIN, s.ChainCheck)
+end
+
+function s.ChainCheck(re, tp, cid)
+	local rc = re:GetHandler()
+	return not (re:GetHandler():IsLevel(4) and not rc:IsCode(id) and re:IsActiveType(TYPE_MONSTER))
+end
+
+function s.ActivateCheck()
+	return Duel.GetCustomActivityCount(id, 0, ACTIVITY_CHAIN) + Duel.GetCustomActivityCount(id, 1, ACTIVITY_CHAIN) == 0
 end
 
 function s.cpcon1(e, tp, eg, ep, ev, re, r, rp)
-	return not s.CustomCheck()
+	return s.ActivateCheck()
 end
 
 function s.cpcon2(e, tp, eg, ep, ev, re, r, rp)
-	return s.CustomCheck()
+	return not s.ActivateCheck()
 end
 
 function s.cpcost(e, tp, eg, ep, ev, re, r, rp, chk)
@@ -161,7 +169,7 @@ end
 
 function s.cpfilter(c)
 	return c:IsSetCard(0x1091) and c:IsType(TYPE_SPELL + TYPE_TRAP) and c:IsAbleToGraveAsCost() and
-	c:CheckActivateEffect(false, true, false) ~= nil
+		c:CheckActivateEffect(false, true, false) ~= nil
 end
 
 function s.cptg(e, tp, eg, ep, ev, re, r, rp, chk, chkc)
@@ -174,19 +182,14 @@ function s.cptg(e, tp, eg, ep, ev, re, r, rp, chk, chkc)
 	if chk == 0 then
 		if e:GetLabel() == 0 then return false end
 		e:SetLabel(0)
-		return c:IsLevelAbove(2)
+		return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
 			and Duel.IsExistingMatchingCard(s.cpfilter, tp, LOCATION_DECK, 0, 1, nil)
 	end
 	e:SetLabel(0)
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
 	Duel.Hint(HINT_SELECTMSG, tp, HINTMSG_TOGRAVE)
 	local g = Duel.SelectMatchingCard(tp, s.cpfilter, tp, LOCATION_DECK, 0, 1, 1, nil)
 	Duel.SendtoGrave(g, REASON_COST)
-	local e1 = Effect.CreateEffect(c)
-	e1:SetType(EFFECT_TYPE_SINGLE)
-	e1:SetCode(EFFECT_UPDATE_LEVEL)
-	e1:SetValue(-1)
-	e1:SetReset(RESET_EVENT + RESETS_STANDARD + RESET_DISABLE)
-	c:RegisterEffect(e1)
 	local te, ceg, cep, cev, cre, cr, crp = g:GetFirst():CheckActivateEffect(false, true, true)
 	Duel.ClearTargetCard()
 	local tg = te:GetTarget()

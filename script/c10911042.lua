@@ -1,6 +1,6 @@
---天印·浮黎
+--天印·昊天
 local s, id, o = GetID()
-s.name = "天印·浮黎"
+s.name = "天印·昊天"
 function s.initial_effect(c)
 	s.PublicEffect(c)
 	s.PrivateEffect(c)

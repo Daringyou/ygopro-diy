@@ -188,21 +188,12 @@ function s.aclimit(e, re, tp)
 			re:GetHandler():GetAttribute())
 end
 
-function s.imtg(e, c)
-	local code_add = aux.SkyTotem_Code_Add
-	local code_sub = aux.SkyTotem_Code_Sub
-	local ct1 = c:GetFlagEffectLabel(code_add) or 0
-	local ct2 = c:GetFlagEffectLabel(code_sub) or 0
-	return c:IsFaceup() and ct1 + ct2 > 0
-end
-
 function s.imcon(e)
 	return e:GetHandler():IsSummonType(SUMMON_TYPE_FUSION)
 end
 
-function s.imval(e, re, ec)
-	local rc = re:GetHandler()
-	return e:GetHandlerPlayer() ~= re:GetOwnerPlayer()
+function s.imval(e, te)
+	return te:GetOwnerPlayer() ~= e:GetHandlerPlayer()
 end
 
 function s.atkcon1(e, tp, eg, ep, ev, re, r, rp)
@@ -234,7 +225,7 @@ end
 function s.atkop(e, tp, eg, ep, ev, re, r, rp)
 	local g = Duel.GetMatchingGroup(s.atkfilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, aux.ExceptThisCard(e))
 	if g:GetCount() == 0 then return end
-	Duel.SendtoHand(g, nil, REASON_EFFECT)
+	Duel.SendtoDeck(g, nil, 2, REASON_EFFECT)
 	local og = Duel.GetOperatedGroup()
 	local ct = og:FilterCount(Card.IsLocation, nil, LOCATION_DECK + LOCATION_EXTRA)
 	if ct > 0 and e:GetHandler():IsFaceup() and e:GetHandler():IsRelateToEffect(e) then

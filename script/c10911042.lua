@@ -1,0 +1,236 @@
+--天印·浮黎
+local s, id, o = GetID()
+s.name = "天印·浮黎"
+function s.initial_effect(c)
+	s.PublicEffect(c)
+	s.PrivateEffect(c)
+end
+
+s.material_type = TYPE_FUSION
+
+function s.PublicEffect(c)
+	c:SetUniqueOnField(1, 0, id, LOCATION_MZONE)
+	--融合召唤手续
+	aux.AddFusionProcFunFunRep(c, s.mfilter1, s.mfilter2, 2, 127, true)
+	aux.AddContactFusionProcedure(c, aux.FilterBoolFunction(Card.IsReleasable, REASON_SPSUMMON),
+		LOCATION_HAND + LOCATION_MZONE, 0, Duel.Release, REASON_MATERIAL + REASON_FUSION):SetValue(SUMMON_TYPE_FUSION)
+	c:EnableReviveLimit()
+	--特殊召唤限制
+	local e1 = Effect.CreateEffect(c)
+	e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE + EFFECT_FLAG_UNCOPYABLE)
+	e1:SetType(EFFECT_TYPE_SINGLE)
+	e1:SetCode(EFFECT_SPSUMMON_CONDITION)
+	e1:SetRange(LOCATION_EXTRA)
+	e1:SetValue(aux.fuslimit)
+	c:RegisterEffect(e1)
+	--放置指示物
+	local e2 = Effect.CreateEffect(c)
+	e2:SetProperty(EFFECT_FLAG_CANNOT_DISABLE + EFFECT_FLAG_UNCOPYABLE)
+	e2:SetType(EFFECT_TYPE_SINGLE + EFFECT_TYPE_CONTINUOUS)
+	e2:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e2:SetCondition(s.settlecon)
+	e2:SetOperation(s.settleop)
+	c:RegisterEffect(e2)
+	local e3 = Effect.CreateEffect(c)
+	e3:SetProperty(EFFECT_FLAG_CANNOT_DISABLE + EFFECT_FLAG_UNCOPYABLE)
+	e3:SetType(EFFECT_TYPE_SINGLE)
+	e3:SetCode(EFFECT_MATERIAL_CHECK)
+	e3:SetValue(s.settleval)
+	e3:SetLabelObject(e2)
+	c:RegisterEffect(e3)
+	--指示物累计取除数值
+	if not aux.SkyCodeCheck then
+		aux.SkyCodeCheck = true
+		aux.SkyCode = 919191340 --累计取除的指示物数量
+		aux.SkyCodePlayer = { [0] = 0, [1] = 0 }
+		SkyCode_Duel_RemoveCounter = Duel.RemoveCounter
+		SkyCode_Card_RemoveCounter = Card.RemoveCounter
+		Duel.RemoveCounter = function(tp, loc_s, loc_o, ctype, ct, reason)
+			if ctype ~= 0x1091 then
+				return SkyCode_Duel_RemoveCounter(tp, loc_s, loc_o, ctype, ct, reason)
+			end
+			s.CalculateTarget(tp, ctype, ct)
+			local res = SkyCode_Duel_RemoveCounter(tp, loc_s, loc_o, ctype, ct, reason)
+			s.CalculateOperation(tp, ctype, ct)
+			return res
+		end
+		Card.RemoveCounter = function(c, tp, ctype, ct, reason)
+			if ctype ~= 0x1091 then
+				return SkyCode_Card_RemoveCounter(c, tp, ctype, ct, reason)
+			end
+			s.CalculateTarget(tp, ctype, ct)
+			local res = SkyCode_Card_RemoveCounter(c, tp, ctype, ct, reason)
+			s.CalculateOperation(tp, ctype, ct)
+			return res
+		end
+	end
+end
+
+function s.mfilter1(c)
+	return c:IsFusionSetCard(0x1091) and c:IsFusionType(TYPE_FUSION)
+end
+
+function s.mfilter2(c, fc)
+	return c:IsFusionType(TYPE_FUSION) and (c:IsLevel(4) or c:IsFusionAttribute(fc:GetOriginalAttribute()))
+end
+
+function s.settlecon(e)
+	return e:GetHandler():IsSummonType(SUMMON_TYPE_FUSION)
+end
+
+function s.settleop(e, tp, eg, ep, ev, re, r, rp)
+	local c = e:GetHandler()
+	local ct = c:GetMaterialCount()
+	local ect = e:GetLabel()
+	c:AddCounter(0x1091, ct + ect)
+end
+
+function s.settleval(e, c)
+	local val = c:GetMaterial():GetSum(Card.GetCounter, 0x1091)
+	e:GetLabelObject():SetLabel(val)
+end
+
+function s.CalculateFilter(c, ctype)
+	if ctype then
+		return c:GetCounter(ctype) > 0
+	end
+	return c:GetFlagEffectLabel(aux.SkyCode + 100)
+end
+
+function s.CalculateTarget(tp, ctype, ct)
+	local g = Duel.GetMatchingGroup(s.CalculateFilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, nil, ctype)
+	if g:GetCount() == 0 then return false end
+	for tc in aux.Next(g) do
+		local ft = tc:GetFlagEffectLabel(aux.SkyCode + 100)
+		if ft then
+			tc:SetFlagEffectLabel(aux.SkyCode + 100, tc:GetCounter(ctype))
+		else
+			tc:RegisterFlagEffect(aux.SkyCode + 100, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1,
+				tc:GetCounter(ctype))
+		end
+	end
+end
+
+function s.CalculateOperation(tp, ctype, ct)
+	local g = Duel.GetMatchingGroup(s.CalculateFilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, nil)
+	for tc in aux.Next(g) do
+		local ft1 = tc:GetFlagEffectLabel(aux.SkyCode + 100)
+		local ft2 = tc:GetCounter(ctype)
+		if ft1 > ft2 then
+			aux.SkyCodePlayer[tp] = aux.SkyCodePlayer[tp] + ft1 - ft2
+			if tc:GetFlagEffect(aux.SkyCode) == 0 then
+				tc:RegisterFlagEffect(aux.SkyCode, RESET_EVENT + RESETS_STANDARD - RESET_TURN_SET, 0, 1)
+			end
+		end
+		tc:ResetFlagEffect(aux.SkyCode + 100)
+	end
+	Duel.Readjust()
+end
+
+function s.ActivateCheck(e, tp, eg, ep, ev, re, r, rp)
+	return Duel.IsExistingMatchingCard(s.ActivateCheckFilter, tp, LOCATION_MZONE, 0, 1, nil)
+end
+
+function s.ActivateCheckFilter(c)
+	return c:IsFaceup() and c:IsSetCard(0x1091) and not c:IsCode(id)
+end
+
+function s.PrivateEffect(c)
+	--限制发动
+	local e1 = Effect.CreateEffect(c)
+	e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+	e1:SetType(EFFECT_TYPE_FIELD)
+	e1:SetCode(EFFECT_CANNOT_ACTIVATE)
+	e1:SetRange(LOCATION_MZONE)
+	e1:SetTargetRange(0, 1)
+	e1:SetCondition(s.accon)
+	e1:SetValue(s.aclimit)
+	c:RegisterEffect(e1)
+	--效果免疫
+	local e2 = Effect.CreateEffect(c)
+	e2:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
+	e2:SetType(EFFECT_TYPE_SINGLE)
+	e2:SetCode(EFFECT_IMMUNE_EFFECT)
+	e2:SetRange(LOCATION_MZONE)
+	e2:SetCondition(s.imcon)
+	e2:SetValue(s.imval)
+	c:RegisterEffect(e2)
+	--
+	local e3 = Effect.CreateEffect(c)
+	e3:SetDescription(aux.Stringid(id, 0))
+	e3:SetType(EFFECT_TYPE_QUICK_O)
+	e3:SetCode(EVENT_FREE_CHAIN)
+	e3:SetRange(LOCATION_MZONE)
+	e3:SetHintTiming(TIMINGS_CHECK_MONSTER + TIMING_BATTLE_PHASE)
+	e3:SetCountLimit(1)
+	e3:SetCondition(s.atkcon)
+	e3:SetCost(s.atkcost)
+	e3:SetTarget(s.atktg)
+	e3:SetOperation(s.atkop)
+	c:RegisterEffect(e3)
+end
+
+function s.accon(e)
+	return e:GetHandler():GetCounter(0x1091) > 0
+end
+
+function s.acfilter(c, att)
+	return c:GetCounter(0x1091) > 0 and bit.band(c:GetAttribute(), att) ~= 0
+end
+
+function s.aclimit(e, re, tp)
+	return re:IsActiveType(TYPE_MONSTER) and
+		Duel.IsExistingMatchingCard(s.acfilter, e:GetHandlerPlayer(), LOCATION_MZONE, 0, 1, nil,
+			re:GetHandler():GetAttribute())
+end
+
+function s.imtg(e, c)
+	local code_add = aux.SkyTotem_Code_Add
+	local code_sub = aux.SkyTotem_Code_Sub
+	local ct1 = c:GetFlagEffectLabel(code_add) or 0
+	local ct2 = c:GetFlagEffectLabel(code_sub) or 0
+	return c:IsFaceup() and ct1 + ct2 > 0
+end
+
+function s.imcon(e)
+	return e:GetHandler():IsSummonType(SUMMON_TYPE_FUSION)
+end
+
+function s.imval(e, re, ec)
+	local rc = re:GetHandler()
+	return e:GetHandlerPlayer() ~= re:GetOwnerPlayer()
+end
+
+function s.atkcost(e, tp, eg, ep, ev, re, r, rp, chk)
+	if chk == 0 then return Duel.IsCanRemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST) end
+	Duel.RemoveCounter(tp, 1, 0, 0x1091, 1, REASON_COST)
+end
+
+function s.atkfilter(c)
+	return c:GetCounter(0X1091) == 0 and c:IsAbleToDeck()
+end
+
+function s.atktg(e, tp, eg, ep, ev, re, r, rp, chk)
+	if chk == 0 then
+		return Duel.IsExistingMatchingCard(s.atkfilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, 1,
+			e:GetHandler())
+	end
+	local g = Duel.GetMatchingGroup(s.atkfilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, e:GetHandler())
+	Duel.SetOperationInfo(0, CATEGORY_TODECK, g, g:GetCount(), 0, 0)
+end
+
+function s.atkop(e, tp, eg, ep, ev, re, r, rp)
+	local g = Duel.GetMatchingGroup(s.atkfilter, tp, LOCATION_ONFIELD, LOCATION_ONFIELD, aux.ExceptThisCard(e))
+	if g:GetCount() == 0 then return end
+	Duel.SendtoHand(g, nil, REASON_EFFECT)
+	local og = Duel.GetOperatedGroup()
+	local ct = og:FilterCount(Card.IsLocation, nil, LOCATION_DECK + LOCATION_EXTRA)
+	if ct > 0 and e:GetHandler():IsFaceup() and e:GetHandler():IsRelateToEffect(e) then
+		local e1 = Effect.CreateEffect(e:GetHandler())
+		e1:SetType(EFFECT_TYPE_SINGLE)
+		e1:SetCode(EFFECT_UPDATE_ATTACK)
+		e1:SetValue(ct * 300)
+		e1:SetReset(RESET_EVENT + RESETS_STANDARD + RESET_DISABLE)
+		e:GetHandler():RegisterEffect(e1)
+	end
+end

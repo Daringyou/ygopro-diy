@@ -158,16 +158,20 @@ function s.PrivateEffect(c)
 	--
 	local e3 = Effect.CreateEffect(c)
 	e3:SetDescription(aux.Stringid(id, 0))
-	e3:SetType(EFFECT_TYPE_QUICK_O)
-	e3:SetCode(EVENT_FREE_CHAIN)
+	e3:SetType(EFFECT_TYPE_IGNITION)
 	e3:SetRange(LOCATION_MZONE)
-	e3:SetHintTiming(TIMINGS_CHECK_MONSTER + TIMING_BATTLE_PHASE)
-	e3:SetCountLimit(1)
-	e3:SetCondition(s.atkcon)
+	e3:SetCountLimit(1, EFFECT_COUNT_CODE_SINGLE)
+	e3:SetCondition(s.atkcon1)
 	e3:SetCost(s.atkcost)
 	e3:SetTarget(s.atktg)
 	e3:SetOperation(s.atkop)
 	c:RegisterEffect(e3)
+	local e4 = e3:Clone()
+	e4:SetType(EFFECT_TYPE_QUICK_O)
+	e4:SetCode(EVENT_FREE_CHAIN)
+	e4:SetHintTiming(0, TIMINGS_CHECK_MONSTER + TIMING_END_PHASE)
+	e4:SetCondition(s.atkcon2)
+	c:RegisterEffect(e4)
 end
 
 function s.accon(e)
@@ -199,6 +203,14 @@ end
 function s.imval(e, re, ec)
 	local rc = re:GetHandler()
 	return e:GetHandlerPlayer() ~= re:GetOwnerPlayer()
+end
+
+function s.atkcon1(e, tp, eg, ep, ev, re, r, rp)
+	return not s.ActivateCheck(e, tp, eg, ep, ev, re, r, rp)
+end
+
+function s.atkcon2(e, tp, eg, ep, ev, re, r, rp)
+	return s.ActivateCheck(e, tp, eg, ep, ev, re, r, rp)
 end
 
 function s.atkcost(e, tp, eg, ep, ev, re, r, rp, chk)

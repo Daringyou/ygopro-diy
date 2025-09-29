@@ -67,7 +67,7 @@ function s.PublicEffect(c)
 end
 
 function s.mfilter1(c)
-	return c:IsFusionSetCard(0x1091) and c:IsFusionType(TYPE_FUSION)
+	return c:IsFusionType(TYPE_FUSION) and c:IsFusionSetCard(0x1091)
 end
 
 function s.mfilter2(c, fc)
